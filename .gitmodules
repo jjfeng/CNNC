@@ -1,0 +1,3 @@
+[submodule "spinn2"]
+	path = spinn2
+	url = git@github.com:jjfeng/spinn2.git
