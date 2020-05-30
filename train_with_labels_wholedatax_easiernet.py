@@ -41,11 +41,11 @@ log_file = "_output/jean_log.txt"
 seed = 0
 n_layers = 5
 n_hidden = 100
-full_tree_pen = 0.001
-input_pen = 0.001
+full_tree_pen = 0.0005
+input_pen = 0.0001
 num_batches = 5
 max_iters = 500
-max_prox_iters = 100
+max_prox_iters = 200
 ###################################################
 
 

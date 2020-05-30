@@ -27,7 +27,7 @@ batch_size = 32 # mini batch for training
 epochs = 200      #### iterations of trainning, with GPU 1080, each epoch takes about 60s
 #length_TF =3057  # number of divide data parts
 # num_predictions = 20
-model_name = 'jean_test_model.h5'
+model_name = 'cnnc_test_model.h5'
 ###################################################
 
 
