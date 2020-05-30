@@ -27,7 +27,7 @@ batch_size = 32 # mini batch for training
 epochs = 200      #### iterations of trainning, with GPU 1080, each epoch takes about 60s
 #length_TF =3057  # number of divide data parts
 # num_predictions = 20
-model_name = 'keras_cnn_trained_model_shallow.h5'
+model_name = 'jean_test_model.h5'
 ###################################################
 
 
@@ -63,6 +63,7 @@ whole_data_TF = [i for i in range(length_TF)]
 (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,data_path)
 print(x_train.shape, 'x_train samples')
 save_dir = os.path.join(os.getcwd(),'xwhole_saved_models_T_32-32-64-64-128-128-512_e'+str(epochs))
+save_dir = os.path.join(os.getcwd(), '_output', 'whole_model_test')
 if num_classes > 2:
     y_train = keras.utils.to_categorical(y_train, num_classes)
 print(y_train.shape, 'y_train samples')
@@ -73,29 +74,34 @@ if not os.path.isdir(save_dir):
 model = Sequential()
 model.add(Conv2D(32, (3, 3), padding='same',input_shape=x_train.shape[1:]))
 model.add(Activation('relu'))
-model.add(Conv2D(32, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.5))
-
-model.add(Conv2D(64, (3, 3), padding='same'))
-model.add(Activation('relu'))
-model.add(Conv2D(64, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.5))
-
-model.add(Conv2D(128, (3, 3), padding='same'))
-model.add(Activation('relu'))
-model.add(Conv2D(128, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.5))
-
+#model.add(Conv2D(32, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.5))
+#
+#model.add(Conv2D(64, (3, 3), padding='same'))
+#model.add(Activation('relu'))
+#model.add(Conv2D(64, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.5))
+#
+#model.add(Conv2D(128, (3, 3), padding='same'))
+#model.add(Activation('relu'))
+#model.add(Conv2D(128, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.5))
+#
+#model.add(Flatten())
+#model.add(Dense(512))
+#model.add(Activation('relu'))
+#model.add(Dropout(0.5))
 model.add(Flatten())
-model.add(Dense(512))
-model.add(Activation('relu'))
-model.add(Dropout(0.5))
+model.add(Dense(100))
+model.add(Dropout(0.15))
+model.add(Dense(100))
+model.add(Dropout(0.15))
 if num_classes < 2:
     print('no enough categories')
     sys.exit()
@@ -109,9 +115,9 @@ else:
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
-early_stopping = keras.callbacks.EarlyStopping(monitor='val_acc', patience=300, verbose=0, mode='auto')
+early_stopping = keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=300, verbose=0, mode='auto')
 checkpoint1 = ModelCheckpoint(filepath=save_dir + '/weights.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',verbose=1, save_best_only=False, save_weights_only=False, mode='auto', period=1)
-checkpoint2 = ModelCheckpoint(filepath=save_dir + '/weights.hdf5', monitor='val_acc', verbose=1,save_best_only=True, mode='auto', period=1)
+checkpoint2 = ModelCheckpoint(filepath=save_dir + '/weights.hdf5', monitor='val_accuracy', verbose=1,save_best_only=True, mode='auto', period=1)
 callbacks_list = [checkpoint2, early_stopping]
 if not data_augmentation:
     print('Not using data augmentation.')
@@ -126,8 +132,8 @@ print('Saved trained model at %s ' % model_path)
 ############################################################################## plot training process
 plt.figure(figsize=(10, 6))
 plt.subplot(1,2,1)
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')

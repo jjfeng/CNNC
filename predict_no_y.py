@@ -39,6 +39,7 @@ length_TF =int(sys.argv[1]) # number of data parts divided
 data_path = sys.argv[2]
 num_classes = int(sys.argv[3])
 model_path = sys.argv[4] ## KEGG or Reactome or TF
+print("MODEL PATH", model_path)
 print ('select', type)
 whole_data_TF = [i for i in range(length_TF)]
 test_TF = [i for i in range (length_TF)]
@@ -50,31 +51,41 @@ print(x_test.shape, 'x_test samples')
 model = Sequential()
 model.add(Conv2D(32, (3, 3), padding='same',input_shape=x_test.shape[1:]))
 model.add(Activation('relu'))
-model.add(Conv2D(32, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-model.add(Conv2D(64, (3, 3), padding='same'))
-model.add(Activation('relu'))
-model.add(Conv2D(64, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-model.add(Conv2D(128, (3, 3), padding='same'))
-model.add(Activation('relu'))
-model.add(Conv2D(128, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
+#model.add(Conv2D(32, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.25))
+#
+#model.add(Conv2D(64, (3, 3), padding='same'))
+#model.add(Activation('relu'))
+#model.add(Conv2D(64, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.25))
+#
+#model.add(Conv2D(128, (3, 3), padding='same'))
+#model.add(Activation('relu'))
+#model.add(Conv2D(128, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Dropout(0.25))
+#
+#model.add(Flatten())
+#model.add(Dense(512))
+#model.add(Activation('relu'))
+#model.add(Dropout(0.5))
 model.add(Flatten())
-model.add(Dense(512))
-model.add(Activation('relu'))
-model.add(Dropout(0.5))
-model.add(Dense(num_classes))
-model.add(Activation('softmax'))
+model.add(Dense(100))
+model.add(Dropout(0.15))
+model.add(Dense(100))
+model.add(Dropout(0.15))
+if num_classes < 2:
+    raise ValueError("Not enough categories")
+elif num_classes == 2:
+    model.add(Dense(1, activation='sigmoid'))
+else:
+    model.add(Dense(num_classes))
+    model.add(Activation('softmax'))
 sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
 ###########################################################3
@@ -84,6 +95,7 @@ if not os.path.isdir(save_dir):
     os.makedirs(save_dir)
 print ('load model and predict')
 y_predict = model.predict(x_test)
+print(y_predict)
 #np.save(save_dir+'/y_test.npy',y_test)
 np.save(save_dir+'/y_predict.npy',y_predict)
 s = open (save_dir+'/gene_index.txt','w')

@@ -27,7 +27,7 @@ batch_size = 1024 # mini batch for training
 epochs = 20     #### iterations of trainning, with GPU 1080, 600 for KEGG and Reactome, 200 for tasks for GTRD
 #length_TF =3057  # number of divide data parts
 # num_predictions = 20
-model_name = 'keras_cnn_trained_model_shallow.h5'
+model_name = 'jean_test_model.h5'
 ###################################################
 
 
@@ -60,7 +60,7 @@ data_path = sys.argv[2]
 num_classes = int(sys.argv[3])
 whole_data_TF = [i for i in range(length_TF)]
 ###################################################################################################################################
-for test_indel in range(1,4): ################## three fold cross validation                                                     ## for  3 fold CV              
+for test_indel in range(1,4): ################## three fold cross validation                                                     ## for  3 fold CV
     test_TF = [i for i in range (int(np.ceil((test_indel-1)*0.333*length_TF)),int(np.ceil(test_indel*0.333*length_TF)))]         #
     train_TF = [i for i in whole_data_TF if i not in test_TF]                                                                    #
 ###################################################################################################################################
@@ -69,7 +69,8 @@ for test_indel in range(1,4): ################## three fold cross validation    
     (x_test, y_test,count_set) = load_data_TF2(test_TF,data_path)
     print(x_train.shape, 'x_train samples')
     print(x_test.shape, 'x_test samples')
-    save_dir = os.path.join(os.getcwd(),str(test_indel)+'YYYY_saved_models_T_32-32-64-64-128-128-512_e'+str(epochs)) ## the result folder 
+    save_dir = os.path.join(os.getcwd(),str(test_indel)+'YYYY_saved_models_T_32-32-64-64-128-128-512_e'+str(epochs)) ## the result folder
+    save_dir = os.path.join(os.getcwd(),"_output", "fold_%d" % test_indel)
     if num_classes >2:
         y_train = keras.utils.to_categorical(y_train, num_classes)
         y_test = keras.utils.to_categorical(y_test, num_classes)
@@ -80,32 +81,37 @@ for test_indel in range(1,4): ################## three fold cross validation    
         os.makedirs(save_dir)
     ############
     model = Sequential()
-    model.add(Conv2D(32, (3, 3), padding='same',
-                     input_shape=x_train.shape[1:]))
-    model.add(Activation('relu'))
-    model.add(Conv2D(32, (3, 3)))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
+    #model.add(Conv2D(32, (3, 3), padding='same',
+    #                 input_shape=x_train.shape[1:]))
+    #model.add(Activation('relu'))
+    #model.add(Conv2D(32, (3, 3)))
+    #model.add(Activation('relu'))
+    #model.add(MaxPooling2D(pool_size=(2, 2)))
+    #model.add(Dropout(0.25))
 
-    model.add(Conv2D(64, (3, 3), padding='same'))
-    model.add(Activation('relu'))
-    model.add(Conv2D(64, (3, 3)))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
+    #model.add(Conv2D(64, (3, 3), padding='same'))
+    #model.add(Activation('relu'))
+    #model.add(Conv2D(64, (3, 3)))
+    #model.add(Activation('relu'))
+    #model.add(MaxPooling2D(pool_size=(2, 2)))
+    #model.add(Dropout(0.25))
 
-    model.add(Conv2D(128, (3, 3), padding='same'))
-    model.add(Activation('relu'))
-    model.add(Conv2D(128, (3, 3)))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
+    #model.add(Conv2D(128, (3, 3), padding='same'))
+    #model.add(Activation('relu'))
+    #model.add(Conv2D(128, (3, 3)))
+    #model.add(Activation('relu'))
+    #model.add(MaxPooling2D(pool_size=(2, 2)))
+    #model.add(Dropout(0.25))
 
+    #model.add(Flatten())
+    #model.add(Dense(512))
+    #model.add(Activation('relu'))
+    #model.add(Dropout(0.5))
     model.add(Flatten())
-    model.add(Dense(512))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
+    model.add(Dense(100))
+    model.add(Dropout(0.15))
+    model.add(Dense(100))
+    model.add(Dropout(0.15))
     if num_classes <2:
         print ('no enough categories')
         sys.exit()
@@ -119,10 +125,10 @@ for test_indel in range(1,4): ################## three fold cross validation    
         sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
         model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
 
-    early_stopping = keras.callbacks.EarlyStopping(monitor='val_acc', patience=50, verbose=0, mode='auto')
+    early_stopping = keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=50, verbose=0, mode='auto')
     checkpoint1 = ModelCheckpoint(filepath=save_dir + '/weights.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',
                                   verbose=1, save_best_only=False, save_weights_only=False, mode='auto', period=1)
-    checkpoint2 = ModelCheckpoint(filepath=save_dir + '/weights.hdf5', monitor='val_acc', verbose=1,
+    checkpoint2 = ModelCheckpoint(filepath=save_dir + '/weights.hdf5', monitor='val_accuracy', verbose=1,
                                   save_best_only=True, mode='auto', period=1)
     callbacks_list = [checkpoint2, early_stopping]
     if not data_augmentation:
@@ -139,16 +145,18 @@ for test_indel in range(1,4): ################## three fold cross validation    
     print('Saved trained model at %s ' % model_path)
     # Score trained model.
     scores = model.evaluate(x_test, y_test, verbose=1)
+    print(scores)
     print('Test loss:', scores[0])
     print('Test accuracy:', scores[1])
+    print(history.history)
     y_predict = model.predict(x_test)
     np.save(save_dir+'/end_y_test.npy',y_test)
     np.save(save_dir+'/end_y_predict.npy',y_predict)
 ############################################################################## plot training process
     plt.figure(figsize=(10, 6))
     plt.subplot(1,2,1)
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
