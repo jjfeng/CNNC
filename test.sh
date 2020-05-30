@@ -10,7 +10,12 @@ python train_new_model/train_with_labels_wholedatax.py 3 NEPDF_data 3
 python predict_no_y.py  3 NEPDF_data 3 /home/jfeng2/CNNC/_output/whole_model_test/jean_test_model.h5
 
 
-python get_xy_label_data_cnn_combine_from_database.py None data/sc_gene_list.txt data/bone_marrow_gene_pairs_200.txt data/bone_marrow_gene_pairs_200_num_small.txt None data/bone_marrow_cell.h5 1
+# create train data
+python get_xy_label_data_cnn_combine_from_database.py None data/sc_gene_list.txt data/bone_marrow_gene_pairs_200.txt data/bone_marrow_gene_pairs_200_num_small.txt None /fh//fast/matsen_e/jfeng2/CNNC_data/bone_marrow_cell.h5 1 NEPDF_data
+
+# create test data
+python get_xy_label_data_cnn_combine_from_database.py None data/sc_gene_list.txt data/bone_marrow_gene_pairs_200.txt data/bone_marrow_gene_pairs_200_num_test.txt None /fh//fast/matsen_e/jfeng2/CNNC_data/bone_marrow_cell.h5 1 NEPDF_data_test
+
 python train_with_labels_wholedatax_easiernet.py  3 NEPDF_data 3
 python predict_easiernet.py 3 NEPDF_data 3 _output/jean_test_model.pt
 

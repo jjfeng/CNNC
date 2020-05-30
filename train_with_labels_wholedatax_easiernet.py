@@ -70,57 +70,60 @@ def load_data_TF2(indel_list,data_path): # cell type specific  ## random samples
     print (np.array(xxdata_list).shape)
     return((np.array(xxdata_list),yydata_x,count_set))
 
+def main(args=sys.argv[1:]):
+    if len(sys.argv) < 4:
+        print ('No enough input files')
+        sys.exit()
 
-if len(sys.argv) < 4:
-    print ('No enough input files')
-    sys.exit()
+    logging.basicConfig(
+        format="%(message)s", filename=log_file, level=logging.DEBUG
+    )
 
-logging.basicConfig(
-    format="%(message)s", filename=log_file, level=logging.DEBUG
-)
+    length_TF =int(sys.argv[1]) # number of data parts divided
+    data_path = sys.argv[2]
+    num_classes = int(sys.argv[3])
+    whole_data_TF = [i for i in range(length_TF)]
+    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,data_path)
+    x_train = x_train.reshape((x_train.shape[0],-1))
+    n_obs = x_train.shape[0]
+    n_inputs = x_train.shape[1]
+    print(x_train.shape, 'x_train samples')
+    save_dir = os.path.join(os.getcwd(), '_output', 'whole_model_test')
+    print(y_train)
+    #if num_classes > 2:
+    #    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_train = y_train.reshape((y_train.size, 1))
+    print(y_train.shape, 'y_train samples')
+        ###########
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+        ############
+    estimator = SierNetEstimator(
+        n_inputs=n_inputs,
+        input_filter_layer=True,
+        n_layers=n_layers,
+        n_hidden=n_hidden,
+        n_out=num_classes,
+        full_tree_pen=full_tree_pen,
+        input_pen=input_pen,
+        batch_size=(n_obs // num_batches + 1),
+        num_classes=num_classes,
+        # Weight classes by inverse of their observed ratios. Trying to balance classes
+        weight=(n_obs / (num_classes * np.bincount(y_train.flatten()))
+        if num_classes >= 2
+        else None),
+    )
+    torch.manual_seed(seed)
+    estimator.fit(
+        x_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
+    )
+    print("SUCCESS")
 
-length_TF =int(sys.argv[1]) # number of data parts divided
-data_path = sys.argv[2]
-num_classes = int(sys.argv[3])
-whole_data_TF = [i for i in range(length_TF)]
-(x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,data_path)
-x_train = x_train.reshape((x_train.shape[0],-1))
-n_obs = x_train.shape[0]
-n_inputs = x_train.shape[1]
-print(x_train.shape, 'x_train samples')
-save_dir = os.path.join(os.getcwd(), '_output', 'whole_model_test')
-print(y_train)
-#if num_classes > 2:
-#    y_train = keras.utils.to_categorical(y_train, num_classes)
-y_train = y_train.reshape((y_train.size, 1))
-print(y_train.shape, 'y_train samples')
-    ###########
-if not os.path.isdir(save_dir):
-    os.makedirs(save_dir)
-    ############
-estimator = SierNetEstimator(
-    n_inputs=n_inputs,
-    input_filter_layer=True,
-    n_layers=n_layers,
-    n_hidden=n_hidden,
-    n_out=num_classes,
-    full_tree_pen=full_tree_pen,
-    input_pen=input_pen,
-    batch_size=(n_obs // num_batches + 1),
-    num_classes=num_classes,
-    # Weight classes by inverse of their observed ratios. Trying to balance classes
-    weight=(n_obs / (num_classes * np.bincount(y_train.flatten()))
-    if num_classes >= 2
-    else None),
-)
-torch.manual_seed(seed)
-estimator.fit(
-    x_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
-)
-print("SUCCESS")
+    meta_state_dict = estimator.get_params()
+    meta_state_dict["state_dicts"] = [
+        estimator.net.state_dict()
+    ]
+    torch.save(meta_state_dict, out_model_file)
 
-meta_state_dict = estimator.get_params()
-meta_state_dict["state_dicts"] = [
-    estimator.net.state_dict()
-]
-torch.save(meta_state_dict, out_model_file)
+if __name__ == "__main__":
+    main(sys.argv[1:])

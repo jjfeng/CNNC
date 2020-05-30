@@ -17,7 +17,9 @@
 import pandas as pd
 from numpy import *
 import json, re,os, sys
-save_dir = os.path.join(os.getcwd(),'NEPDF_data')
+
+save_dir_name = sys.argv[8]
+save_dir = os.path.join(os.getcwd(),save_dir_name)
 if not os.path.isdir(save_dir):
     os.makedirs(save_dir)
 def get_gene_list_bulk(file_name):
@@ -49,7 +51,7 @@ def get_sepration_index (file_name):
     return (np.array(index_list))
 
 # Script starts from here
-if len(sys.argv) < 8:
+if len(sys.argv) < 9:
     print ('No enough input files')
     sys.exit()
 if not sys.argv[1] == 'None':
