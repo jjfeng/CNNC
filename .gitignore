@@ -1,4 +1,5 @@
 NEPDF_data/
+data/
 _output/
 predict_results_no_y_1/
 trained_models/

@@ -81,7 +81,11 @@ else:
     sys.exit()
 if not sys.argv[6] == 'None':
     store = pd.HDFStore(sys.argv[6])#'/home/yey3/sc_process_1/rank_total_gene_rpkm.h5')    # scRNA-seq expression data                        )#
-    rpkm = store['rpkm']
+    print("SDFSDF")
+    print(store)
+    print(list(store.keys()))
+    #rpkm = store['rpkm']
+    rpkm = store['/RPKMs']
     store.close()
     print('read sc RNA-seq expression')
 elif sys.argv[2] == 'None':  ### sc list = none
