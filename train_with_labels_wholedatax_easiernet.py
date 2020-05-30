@@ -34,7 +34,7 @@ batch_size = 32 # mini batch for training
 epochs = 2      #### iterations of trainning, with GPU 1080, each epoch takes about 60s
 #length_TF =3057  # number of divide data parts
 # num_predictions = 20
-model_name = 'jean_test_model.h5'
+out_model_file = '_output/jean_test_model.pt'
 
 log_file = "_output/jean_log.txt"
 
@@ -42,10 +42,10 @@ seed = 0
 n_layers = 5
 n_hidden = 100
 full_tree_pen = 0.1
-input_pen = 0.1
-num_batches = 3
-max_iters = 500
-max_prox_iters = 200
+input_pen = 0.001
+num_batches = 5
+max_iters = 100
+max_prox_iters = 100
 ###################################################
 
 
@@ -119,36 +119,8 @@ estimator.fit(
 )
 print("SUCCESS")
 
-#early_stopping = keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=300, verbose=0, mode='auto')
-#checkpoint1 = ModelCheckpoint(filepath=save_dir + '/weights.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',verbose=1, save_best_only=False, save_weights_only=False, mode='auto', period=1)
-#checkpoint2 = ModelCheckpoint(filepath=save_dir + '/weights.hdf5', monitor='val_accuracy', verbose=1,save_best_only=True, mode='auto', period=1)
-#callbacks_list = [checkpoint2, early_stopping]
-#if not data_augmentation:
-#    print('Not using data augmentation.')
-#    history = model.fit(x_train, y_train,batch_size=batch_size,epochs=epochs,validation_split=0.2,shuffle=True, callbacks=callbacks_list)
-#
-#    # Save model and weights
-#
-#model_path = os.path.join(save_dir, model_name)
-#model.save(model_path)
-#print('Saved trained model at %s ' % model_path)
-#    # Score trained model.
-############################################################################### plot training process
-#plt.figure(figsize=(10, 6))
-#plt.subplot(1,2,1)
-#plt.plot(history.history['accuracy'])
-#plt.plot(history.history['val_accuracy'])
-#plt.title('model accuracy')
-#plt.ylabel('accuracy')
-#plt.xlabel('epoch')
-#plt.grid()
-#plt.legend(['train', 'val'], loc='upper left')
-#plt.subplot(1,2,2)
-#plt.plot(history.history['loss'])
-#plt.plot(history.history['val_loss'])
-#plt.title('model loss')
-#plt.ylabel('loss')
-#plt.xlabel('epoch')
-#plt.legend(['train', 'val'], loc='upper left')
-#plt.grid()
-#plt.savefig(save_dir+'/end_result.pdf')
+meta_state_dict = estimator.get_params()
+meta_state_dict["state_dicts"] = [
+    estimator.net.state_dict()
+]
+torch.save(meta_state_dict, out_model_file)
