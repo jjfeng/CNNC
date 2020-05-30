@@ -14,29 +14,9 @@ from scipy import interp
 import torch
 from spinn2.network import SierNet
 
+from common import get_perf
 from train_with_labels_wholedatax_easiernet import load_data_TF2
 
-
-################################
-#num_classes = 3 ################################# the number of classes might vary for your special application
-#length_TF =2 # number of data parts divided
-#def load_data_TF2(indel_list,data_path): # cell type specific  ## random samples for reactome is not enough, need borrow some from keggp
-#    """
-#    This method does not load y labels
-#    """
-#    import random
-#    import numpy as np
-#    xxdata_list = []
-#    yydata = []
-#    count_set = [0]
-#    count_setx = 0
-#    for i in indel_list:#len(h_tf_sc)):
-#        xdata = np.load(data_path+'/Nxdata_tf' + str(i) + '.npy')
-#        for k in range(xdata.shape[0]):
-#            xxdata_list.append(xdata[k,:,:,:])
-#        count_setx = count_setx + xdata.shape[0]
-#        count_set.append(count_setx)
-#    return((np.array(xxdata_list),count_set))
 
 def load_easier_net(model_file):
     meta_state_dict = torch.load(model_file)
@@ -67,24 +47,7 @@ y_test = y_test.reshape((y_test.size, 1))
 
 model = load_easier_net(model_path)
 
-save_dir = os.path.join(os.getcwd(),'predict_results_no_y_1')
-if not os.path.isdir(save_dir):
-    os.makedirs(save_dir)
-print ('do predict')
 y_log_prob = model.predict_log_proba(x_test)
-y_prob = np.exp(y_log_prob)
-loss_fn = torch.nn.CrossEntropyLoss()
-print(y_test.dtype)
-test_loss = loss_fn(torch.tensor(y_log_prob), torch.tensor(y_test[:,0], dtype=torch.long))
-
-y_discrete_pred = np.argmax(y_prob, axis=1).reshape((-1,1))
-test_acc = np.mean(y_test == y_discrete_pred)
-print("TEST ACC", test_acc)
-print("TEST loss", test_loss)
-#np.save(save_dir+'/y_test.npy',y_test)
-np.save(save_dir+'/y_predict.npy',y_prob)
-s = open (save_dir+'/gene_index.txt','w')
-for i in count_set:
-    s.write(str(i)+'\n')
-s.close()
-######################################
+y_predict = np.exp(y_log_prob)
+perf_dict = get_perf(y_predict, y_test)
+print(perf_dict)

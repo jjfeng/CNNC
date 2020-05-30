@@ -17,7 +17,7 @@ python get_xy_label_data_cnn_combine_from_database.py None data/sc_gene_list.txt
 python get_xy_label_data_cnn_combine_from_database.py None data/sc_gene_list.txt data/bone_marrow_gene_pairs_200.txt data/bone_marrow_gene_pairs_200_num_test.txt None /fh//fast/matsen_e/jfeng2/CNNC_data/bone_marrow_cell.h5 1 NEPDF_data_test
 
 python train_with_labels_wholedatax_easiernet.py  3 NEPDF_data 3
-python predict_easiernet.py 3 NEPDF_data 3 _output/jean_test_model.pt
+python predict_easiernet.py 1 NEPDF_data 3 _output/jean_test_model.pt
 
 # Trained model is binary, but the training data is for all 3 outcomes.
 python predict_no_y.py  1 NEPDF_data 1 trained_models/GTRD_bone_keras_cnn_trained_model_shallow.h5
