@@ -17,7 +17,7 @@ NUM_INITS = 5
 EPOCHS = 31
 PROX_EPOCHS = 11
 FULL_TREE_PENS = [0.0001,0.00001]
-INPUT_PENS = [0.0001,0.00001]
+INPUT_PENS = [0.001,0.0001,0.00001]
 
 nest.add(
     'seed',
@@ -174,9 +174,9 @@ def fit_easier_net(env, outdir, c):
         '--n-hidden 100',
         '--n-layers 5',
         '--max-iters',
-        EPOCHS,
+        2 * EPOCHS,
         '--max-prox-iters',
-        PROX_EPOCHS,
+        2 * PROX_EPOCHS,
         '--do-binary',
 	'--out-model-file ${TARGETS[1]}',
 	'--log-file ${TARGETS[0]}']
@@ -249,9 +249,9 @@ def fit_final_easier_net(env, outdir, c):
         NUM_INITS * 2,
         '--num-classes 2',
         '--max-iters',
-        EPOCHS,
+        2 * EPOCHS,
         '--max-prox-iters',
-        PROX_EPOCHS,
+        2 * PROX_EPOCHS,
         '--do-binary',
         '--model-fit-params',
         '${SOURCES[0]}',
@@ -265,7 +265,8 @@ def fit_final_easier_net(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def evaluate_easiernet(env, outdir, c):
     targets = [
-        join(outdir, 'eval_easiernet.json')]
+        join(outdir, 'eval_easiernet.json'),
+        join(outdir, 'eval_easiernet_log.txt')]
     cmd = [
         'python predict_easiernet.py',
         '--tf-idx',
@@ -273,7 +274,8 @@ def evaluate_easiernet(env, outdir, c):
         '--data-path NEPDF_data',
         '--do-binary',
 	'--model-path ${SOURCES[1]}',
-	'--out-file ${TARGETS[0]}']
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
     return env.Command(
         targets,
         c['fit_final_easier_net'],

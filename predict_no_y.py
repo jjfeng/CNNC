@@ -77,7 +77,7 @@ def parse_args(args):
 def main(args=sys.argv[1:]):
     args = parse_args(args)
     test_TF = [args.tf_idx]
-    (x_test, y_test, count_set) = load_data_TF2(test_TF,args.data_path, binary_outcome=args.do_binary, flatten=args.fit_dnn)
+    x_test, y_test, _ = load_data_TF2(test_TF,args.data_path, binary_outcome=args.do_binary, flatten=args.fit_dnn)
     print(x_test.shape, 'x_test samples')
     ############
 

@@ -13,6 +13,7 @@ from scipy import interp
 # Jean modifications
 import argparse
 import json
+import logging
 
 import torch
 from scipy.special import logsumexp
@@ -48,6 +49,9 @@ def parse_args(args):
     parser.add_argument(
         "--out-file", type=str
     )
+    parser.add_argument(
+        "--log-file", type=str
+    )
     args = parser.parse_args()
 
     return args
@@ -65,11 +69,16 @@ def load_easier_net(model_file):
         )
         model.load_state_dict(state_dict)
         model.eval()
+        model.get_net_struct()
         models.append(model)
     return models
 
 def main(args=sys.argv[1:]):
     args = parse_args(args)
+    logging.basicConfig(
+        format="%(message)s", filename=args.log_file, level=logging.DEBUG
+    )
+
     test_TF = [args.tf_idx]
     (x_test, y_test, count_set) = load_data_TF2(test_TF,args.data_path, binary_outcome=args.do_binary, flatten=True)
     x_test = x_test.reshape((x_test.shape[0],-1))

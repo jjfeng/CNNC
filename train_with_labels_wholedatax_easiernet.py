@@ -32,6 +32,7 @@ from sklearn.base import clone
 import torch
 
 from spinn2.sier_net import SierNetEstimator
+from spinn2.vgg_sier_net import VGGSierNetEstimator
 
 ###################################################
 def parse_args(args):
@@ -79,6 +80,9 @@ def parse_args(args):
     )
     parser.add_argument(
         "--n-hidden", type=int, default=50, help="Number of hidden nodes per layer"
+    )
+    parser.add_argument(
+        "--is-vgg", action="store_true",
     )
     parser.add_argument(
         "--full-tree-pen", type=float, default=0.001
@@ -138,7 +142,7 @@ def _fit(
     )
     return my_estimator
 
-def load_data_TF2(indel_list, data_path, binary_outcome=False, flatten=False): # cell type specific  ## random samples for reactome is not enough, need borrow some from keggp
+def load_data_TF2(indel_list, data_path, binary_outcome=False, flatten=False):
     import random
     import numpy as np
     xxdata_list = []
@@ -182,7 +186,7 @@ def main(args=sys.argv[1:]):
     y_trains = []
     whole_data_TF = [i for i in range(args.num_tf) if i != args.exclude_tf]
     for tf_idx in whole_data_TF:
-        x_train, y_train, _ = load_data_TF2([tf_idx],args.data_path,binary_outcome=args.do_binary,flatten=True)
+        x_train, y_train, _ = load_data_TF2([tf_idx],args.data_path,binary_outcome=args.do_binary,flatten=not args.is_vgg)
         x_trains.append(x_train)
         y_trains.append(y_train)
     n_inputs = x_train.shape[1]
@@ -192,21 +196,36 @@ def main(args=sys.argv[1:]):
     ######
     # Begin training
     ######
-    base_estimator = SierNetEstimator(
-        n_inputs=n_inputs,
-        input_filter_layer=True,
-        n_layers=args.n_layers,
-        n_hidden=args.n_hidden,
-        n_out=args.num_classes,
-        full_tree_pen=args.full_tree_pen,
-        input_pen=args.input_pen,
-        batch_size=args.batch_size,
-        num_classes=args.num_classes,
-        weight=n_obs / (args.num_classes * np.bincount(y.flatten()))
-        if args.num_classes >= 2
-        else None,
-    )
-    parallel = Parallel(n_jobs=args.n_jobs, verbose=True, pre_dispatch=args.n_jobs)
+    if args.is_vgg:
+        base_estimator = VGGSierNetEstimator(
+            n_inputs=(n_inputs, n_inputs),
+            input_filter_layer=True,
+            n_out=args.num_classes,
+            full_tree_pen=args.full_tree_pen,
+            input_pen=args.input_pen,
+            batch_size=args.batch_size,
+            num_classes=args.num_classes,
+            weight=n_obs / (args.num_classes * np.bincount(y.flatten()))
+            if args.num_classes >= 2
+            else None,
+        )
+        x_trains = [x.reshape((x.shape[0], 1, x.shape[1], x.shape[2])) for x in x_trains]
+    else:
+        base_estimator = SierNetEstimator(
+            n_inputs=n_inputs,
+            input_filter_layer=True,
+            n_layers=args.n_layers,
+            n_hidden=args.n_hidden,
+            n_out=args.num_classes,
+            full_tree_pen=args.full_tree_pen,
+            input_pen=args.input_pen,
+            batch_size=args.batch_size,
+            num_classes=args.num_classes,
+            weight=n_obs / (args.num_classes * np.bincount(y.flatten()))
+            if args.num_classes >= 2
+            else None,
+        )
+    parallel = Parallel(n_jobs=args.n_jobs, verbose=True, pre_dispatch=args.n_jobs) if args.n_jobs > 1 else None
     if args.fold_idxs_file is not None:
         with open(args.fold_idxs_file, "rb") as f:
             fold_idx_dict = pickle.load(f)
@@ -245,17 +264,31 @@ def main(args=sys.argv[1:]):
             ] = estimator.net.state_dict()
         torch.save(meta_state_dict, args.out_model_file)
     else:
-        all_estimators = parallel(delayed(_fit)(
-                base_estimator,
-                x_trains,
-                y_trains,
-                train=np.arange(len(x_trains)),
-                max_iters=args.max_iters,
-                max_prox_iters=args.max_prox_iters,
-                seed=args.seed + init_idx,
+        if parallel is not None:
+            all_estimators = parallel(delayed(_fit)(
+                    base_estimator,
+                    x_trains,
+                    y_trains,
+                    train=np.arange(len(x_trains)),
+                    max_iters=args.max_iters,
+                    max_prox_iters=args.max_prox_iters,
+                    seed=args.seed + init_idx,
+                )
+                for init_idx in range(args.num_inits)
             )
-            for init_idx in range(args.num_inits)
-        )
+        else:
+            all_estimators = [_fit(
+                    base_estimator,
+                    x_trains,
+                    y_trains,
+                    train=np.arange(len(x_trains)),
+                    max_iters=args.max_iters,
+                    max_prox_iters=args.max_prox_iters,
+                    seed=args.seed + init_idx,
+                )
+                for init_idx in range(args.num_inits)
+            ]
+
         meta_state_dict = all_estimators[0].get_params()
         meta_state_dict["state_dicts"] = [
             estimator.net.state_dict() for estimator in all_estimators
