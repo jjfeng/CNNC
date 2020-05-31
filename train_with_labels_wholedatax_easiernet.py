@@ -98,6 +98,9 @@ def parse_args(args):
         help="A json file that specifies what the hyperparameters are. If given, this will override the arguments passed in.",
     )
     parser.add_argument("--log-file", type=str, default="_output/log_nn.txt")
+    parser.add_argument(
+        "--n-jobs", type=int, default=None, help="Number jobs"
+    )
     parser.add_argument("--out-model-file", type=str, default="_output/nn.pt")
     args = parser.parse_args()
 
@@ -111,7 +114,8 @@ def parse_args(args):
             args.n_layers = model_params["n_layers"]
             args.n_hidden = model_params["n_hidden"]
 
-    args.n_jobs = args.num_inits
+    if args.n_jobs is None:
+        args.n_jobs = args.num_inits
     return args
 
 def _fit(

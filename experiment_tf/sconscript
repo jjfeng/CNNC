@@ -16,8 +16,8 @@ NUM_TF = 13
 NUM_INITS = 5
 EPOCHS = 31
 PROX_EPOCHS = 11
-FULL_TREE_PENS = [0.001,0.0001]
-INPUT_PENS = [0.01,0.001,0.0001]
+FULL_TREE_PENS = [0.0001,0.00001]
+INPUT_PENS = [0.0001,0.00001]
 
 nest.add(
     'seed',
@@ -26,7 +26,7 @@ nest.add(
 
 nest.add(
     'tf_idx',
-    [0],
+    np.arange(5),
     label_func=lambda c: 'tf_%d' % c)
 
 @nest.add_target_with_env(localenv)
@@ -54,7 +54,6 @@ def fit_dnn(env, outdir, c):
     targets = [
         join(outdir, 'dnn_model.h5')]
     cmd = [
-        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
         'python train_with_labels_wholedatax.py',
         '--num-tf',
         NUM_TF,
@@ -102,7 +101,6 @@ def fit_cnnc(env, outdir, c):
     targets = [
         join(outdir, 'cnnc_model.h5')]
     cmd = [
-        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
         'python train_with_labels_wholedatax.py',
         '--num-tf',
         NUM_TF,
@@ -165,6 +163,7 @@ def fit_easier_net(env, outdir, c):
         '--fold-idxs ${SOURCES[0]}',
         '--num-init',
         NUM_INITS,
+        '--n-jobs 4',
         '--num-classes 2',
         '--full-tree-pen',
         c['full_tree_pen'],
@@ -210,8 +209,8 @@ nest.pop('input_pen')
 @nest.add_target_with_env(localenv)
 def select_easier_net(env, outdir, c):
     targets = [
-        join(outdir, 'selected_siernet.json'),
-        join(outdir, 'selected_siernet_log.txt')]
+        join(outdir, 'selected_easiernet.json'),
+        join(outdir, 'selected_easiernet_log.txt')]
     template = join("experiment_tf", c['easier_net_res'][0].replace(
         	"input_pen_%.8f/full_tree_pen_%.8f/" % (INPUT_PENS[0], FULL_TREE_PENS[0]),
                 "input_pen_%.8f/full_tree_pen_%.8f/"))
