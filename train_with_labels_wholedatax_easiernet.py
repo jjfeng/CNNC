@@ -22,6 +22,7 @@ from scipy import interp
 
 ###############
 # Jean modifications
+import json
 import pickle
 import argparse
 import itertools
@@ -91,11 +92,24 @@ def parse_args(args):
     parser.add_argument(
         "--max-iters", type=int, default=40, help="Number of Adam epochs"
     )
+    parser.add_argument(
+        "--model-fit-params-file",
+        type=str,
+        help="A json file that specifies what the hyperparameters are. If given, this will override the arguments passed in.",
+    )
     parser.add_argument("--log-file", type=str, default="_output/log_nn.txt")
     parser.add_argument("--out-model-file", type=str, default="_output/nn.pt")
     args = parser.parse_args()
 
     assert args.num_classes != 1
+    if args.model_fit_params_file is not None:
+        with open(args.model_fit_params_file, "r") as f:
+            model_params = json.load(f)
+            args.full_tree_pen = model_params["full_tree_pen"]
+            args.input_pen = model_params["input_pen"]
+            args.input_filter_layer = model_params["input_filter_layer"]
+            args.n_layers = model_params["n_layers"]
+            args.n_hidden = model_params["n_hidden"]
 
     args.n_jobs = args.num_inits
     return args
