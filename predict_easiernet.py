@@ -12,6 +12,8 @@ from scipy import interp
 ###############################
 # Jean modifications
 import torch
+from scipy.special import logsumexp
+
 from spinn2.network import SierNet
 
 from common import get_perf
@@ -20,16 +22,19 @@ from train_with_labels_wholedatax_easiernet import load_data_TF2
 
 def load_easier_net(model_file):
     meta_state_dict = torch.load(model_file)
-    model = SierNet(
-        n_layers=meta_state_dict["n_layers"],
-        n_input=meta_state_dict["n_inputs"],
-        n_hidden=meta_state_dict["n_hidden"],
-        n_out=meta_state_dict["n_out"],
-        input_filter_layer=meta_state_dict["input_filter_layer"],
-    )
-    model.load_state_dict(meta_state_dict["state_dicts"][0])
-    model.eval()
-    return model
+    models = []
+    for state_dict in meta_state_dict["state_dicts"]:
+        model = SierNet(
+            n_layers=meta_state_dict["n_layers"],
+            n_input=meta_state_dict["n_inputs"],
+            n_hidden=meta_state_dict["n_hidden"],
+            n_out=meta_state_dict["n_out"],
+            input_filter_layer=meta_state_dict["input_filter_layer"],
+        )
+        model.load_state_dict(state_dict)
+        model.eval()
+        models.append(model)
+    return models
 
 length_TF =int(sys.argv[1]) # number of data parts divided
 data_path = sys.argv[2]
@@ -45,9 +50,9 @@ print(x_test.shape, 'x_test samples')
 y_test = y_test.reshape((y_test.size, 1))
 ############
 
-model = load_easier_net(model_path)
+models = load_easier_net(model_path)
 
-y_log_prob = model.predict_log_proba(x_test)
+y_log_prob = logsumexp([model.predict_log_proba(x_test) for model in models], axis=0) - np.log(len(models))
 y_predict = np.exp(y_log_prob)
 perf_dict = get_perf(y_predict, y_test)
 print(perf_dict)

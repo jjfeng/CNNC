@@ -22,14 +22,16 @@ from scipy import interp
 
 ###############
 # Jean modifications
+from joblib import Parallel, delayed
 import logging
+from sklearn.base import clone
 import torch
 
 from spinn2.sier_net import SierNetEstimator
+#from spinn2.fit_easier_net import _fit
 ####################################### parameter settings
 data_augmentation = False
 # num_predictions = 20
-batch_size = 32 # mini batch for training
 #num_classes = 3   #### categories of labels
 epochs = 2      #### iterations of trainning, with GPU 1080, each epoch takes about 60s
 #length_TF =3057  # number of divide data parts
@@ -41,15 +43,36 @@ log_file = "_output/jean_log.txt"
 seed = 0
 n_layers = 5
 n_hidden = 100
-full_tree_pen = 0.0005
-input_pen = 0.0001
-num_batches = 5
-max_iters = 500
-max_prox_iters = 200
+full_tree_pen = 0.0001
+input_pen = 0.0004
+batch_size = 32
+n_batches = 3
+max_iters = 201
+max_prox_iters = 101
+num_inits = 10
+n_jobs = num_inits
 ###################################################
 
+def _fit(
+    estimator,
+    X,
+    y,
+    train,
+    max_iters: int = 100,
+    max_prox_iters: int = 100,
+    seed: int = 0,
+) -> list:
+    torch.manual_seed(seed)
+    X_train = X[train]
+    y_train = y[train]
 
-def load_data_TF2(indel_list,data_path): # cell type specific  ## random samples for reactome is not enough, need borrow some from keggp
+    my_estimator = clone(estimator)
+    my_estimator.fit(
+        X_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
+    )
+    return my_estimator
+
+def load_data_TF2(indel_list,data_path, flatten=False): # cell type specific  ## random samples for reactome is not enough, need borrow some from keggp
     import random
     import numpy as np
     xxdata_list = []
@@ -60,7 +83,10 @@ def load_data_TF2(indel_list,data_path): # cell type specific  ## random samples
         xdata = np.load(data_path+'/Nxdata_tf' + str(i) + '.npy')
         ydata = np.load(data_path+'/ydata_tf' + str(i) + '.npy')
         for k in range(len(ydata)):
-            xxdata_list.append(xdata[k,:,:,:])
+            if flatten:
+                xxdata_list.append(xdata[k,:,:,:].flatten())
+            else:
+                xxdata_list.append(xdata[k,:,:,:])
             yydata.append(ydata[k])
         count_setx = count_setx + len(ydata)
         count_set.append(count_setx)
@@ -83,8 +109,7 @@ def main(args=sys.argv[1:]):
     data_path = sys.argv[2]
     num_classes = int(sys.argv[3])
     whole_data_TF = [i for i in range(length_TF)]
-    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,data_path)
-    x_train = x_train.reshape((x_train.shape[0],-1))
+    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,data_path, flatten=True)
     n_obs = x_train.shape[0]
     n_inputs = x_train.shape[1]
     print(x_train.shape, 'x_train samples')
@@ -98,7 +123,9 @@ def main(args=sys.argv[1:]):
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
         ############
-    estimator = SierNetEstimator(
+    #torch.manual_seed(seed)
+    #print("THREADS", torch.get_num_threads())
+    base_estimator = SierNetEstimator(
         n_inputs=n_inputs,
         input_filter_layer=True,
         n_layers=n_layers,
@@ -106,23 +133,34 @@ def main(args=sys.argv[1:]):
         n_out=num_classes,
         full_tree_pen=full_tree_pen,
         input_pen=input_pen,
-        batch_size=(n_obs // num_batches + 1),
+        batch_size=(n_obs//n_batches + 1),
         num_classes=num_classes,
         # Weight classes by inverse of their observed ratios. Trying to balance classes
         weight=(n_obs / (num_classes * np.bincount(y_train.flatten()))
         if num_classes >= 2
         else None),
     )
-    torch.manual_seed(seed)
-    estimator.fit(
-        x_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
+    #estimator.fit(
+    #    x_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
+    #)
+    #parallel = Parallel(n_jobs=n_jobs, verbose=True, pre_dispatch=n_jobs)
+    parallel = Parallel(n_jobs=n_jobs)
+    all_estimators = parallel(delayed(_fit)(
+            base_estimator,
+            x_train,
+            y_train,
+            train=np.arange(x_train.shape[0]),
+            max_iters=max_iters,
+            max_prox_iters=max_prox_iters,
+            seed=seed + init_idx,
+        )
+        for init_idx in range(num_inits)
     )
-    print("SUCCESS")
-
-    meta_state_dict = estimator.get_params()
+    meta_state_dict = all_estimators[0].get_params()
     meta_state_dict["state_dicts"] = [
-        estimator.net.state_dict()
+        estimator.net.state_dict() for estimator in all_estimators
     ]
+    print("SUCCESS")
     torch.save(meta_state_dict, out_model_file)
 
 if __name__ == "__main__":
