@@ -22,36 +22,75 @@ from scipy import interp
 
 ###############
 # Jean modifications
+import argparse
 from joblib import Parallel, delayed
 import logging
 from sklearn.base import clone
 import torch
 
 from spinn2.sier_net import SierNetEstimator
-#from spinn2.fit_easier_net import _fit
-####################################### parameter settings
-data_augmentation = False
-# num_predictions = 20
-#num_classes = 3   #### categories of labels
-epochs = 2      #### iterations of trainning, with GPU 1080, each epoch takes about 60s
-#length_TF =3057  # number of divide data parts
-# num_predictions = 20
-out_model_file = '_output/jean_test_model.pt'
 
-log_file = "_output/jean_log.txt"
-
-seed = 0
-n_layers = 5
-n_hidden = 100
-full_tree_pen = 0.0001
-input_pen = 0.0004
-batch_size = 32
-n_batches = 3
-max_iters = 201
-max_prox_iters = 101
-num_inits = 10
-n_jobs = num_inits
 ###################################################
+def parse_args(args):
+    """ parse command line arguments """
+
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random number generator seed for replicability",
+        default=12,
+    )
+    parser.add_argument("--data-file", type=str, default="_output/data.npz")
+    parser.add_argument(
+        "--num-inits",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "--num-classes",
+        type=int,
+        default=0,
+        help="Number of classes in classification. Should be zero if doing regression",
+    )
+    parser.add_argument(
+        "--fit-dnn", action="store_true", default=False, help="Fit DNN vs CNNC"
+    )
+    parser.add_argument(
+        "--data-path", type=str
+    )
+    parser.add_argument(
+        "--num-tf", type=int, default=1
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=32
+    )
+    parser.add_argument(
+        "--n-layers", type=int, default=3, help="Number of hidden layers"
+    )
+    parser.add_argument(
+        "--n-hidden", type=int, default=50, help="Number of hidden nodes per layer"
+    )
+    parser.add_argument(
+        "--full-tree-pen", type=float, default=0.001
+    )
+    parser.add_argument(
+        "--input-pen", type=float, default=0.001
+    )
+    parser.add_argument(
+        "--max-prox-iters", type=int, default=40, help="Number of prox epochs"
+    )
+    parser.add_argument(
+        "--max-iters", type=int, default=40, help="Number of Adam epochs"
+    )
+    parser.add_argument("--log-file", type=str, default="_output/log_nn.txt")
+    parser.add_argument("--out-model-file", type=str, default="_output/nn.pt")
+    args = parser.parse_args()
+
+    assert args.num_classes != 1
+
+    return args
 
 def _fit(
     estimator,
@@ -97,19 +136,17 @@ def load_data_TF2(indel_list,data_path, flatten=False): # cell type specific  ##
     return((np.array(xxdata_list),yydata_x,count_set))
 
 def main(args=sys.argv[1:]):
+    args = parse_args(args)
     if len(sys.argv) < 4:
         print ('No enough input files')
         sys.exit()
 
     logging.basicConfig(
-        format="%(message)s", filename=log_file, level=logging.DEBUG
+        format="%(message)s", filename=args.log_file, level=logging.DEBUG
     )
 
-    length_TF =int(sys.argv[1]) # number of data parts divided
-    data_path = sys.argv[2]
-    num_classes = int(sys.argv[3])
-    whole_data_TF = [i for i in range(length_TF)]
-    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,data_path, flatten=True)
+    whole_data_TF = [i for i in range(args.num_tf)]
+    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,args.data_path, flatten=True)
     n_obs = x_train.shape[0]
     n_inputs = x_train.shape[1]
     print(x_train.shape, 'x_train samples')
@@ -128,40 +165,37 @@ def main(args=sys.argv[1:]):
     base_estimator = SierNetEstimator(
         n_inputs=n_inputs,
         input_filter_layer=True,
-        n_layers=n_layers,
-        n_hidden=n_hidden,
-        n_out=num_classes,
-        full_tree_pen=full_tree_pen,
-        input_pen=input_pen,
-        batch_size=(n_obs//n_batches + 1),
-        num_classes=num_classes,
+        n_layers=args.n_layers,
+        n_hidden=args.n_hidden,
+        n_out=args.num_classes,
+        full_tree_pen=args.full_tree_pen,
+        input_pen=args.input_pen,
+        batch_size=args.batch_size, #(n_obs//n_batches + 1),
+        num_classes=args.num_classes,
         # Weight classes by inverse of their observed ratios. Trying to balance classes
-        weight=(n_obs / (num_classes * np.bincount(y_train.flatten()))
-        if num_classes >= 2
+        weight=(n_obs / (args.num_classes * np.bincount(y_train.flatten()))
+        if args.num_classes >= 2
         else None),
     )
-    #estimator.fit(
-    #    x_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
-    #)
-    #parallel = Parallel(n_jobs=n_jobs, verbose=True, pre_dispatch=n_jobs)
-    parallel = Parallel(n_jobs=n_jobs)
+    n_jobs = args.num_inits
+    parallel = Parallel(n_jobs=n_jobs, verbose=True, pre_dispatch=n_jobs)
     all_estimators = parallel(delayed(_fit)(
             base_estimator,
             x_train,
             y_train,
             train=np.arange(x_train.shape[0]),
-            max_iters=max_iters,
-            max_prox_iters=max_prox_iters,
-            seed=seed + init_idx,
+            max_iters=args.max_iters,
+            max_prox_iters=args.max_prox_iters,
+            seed=args.seed + init_idx,
         )
-        for init_idx in range(num_inits)
+        for init_idx in range(args.num_inits)
     )
     meta_state_dict = all_estimators[0].get_params()
     meta_state_dict["state_dicts"] = [
         estimator.net.state_dict() for estimator in all_estimators
     ]
     print("SUCCESS")
-    torch.save(meta_state_dict, out_model_file)
+    torch.save(meta_state_dict, args.out_model_file)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

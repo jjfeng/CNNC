@@ -23,7 +23,7 @@ from common import get_perf
 from train_with_labels_wholedatax_easiernet import load_data_TF2
 
 
-fit_dnn = True
+fit_dnn = False
 length_TF =int(sys.argv[1]) # number of data parts divided
 data_path = sys.argv[2]
 num_classes = int(sys.argv[3])
@@ -36,7 +36,10 @@ test_TF = [i for i in range (length_TF)]
 print(x_test.shape, 'x_test samples')
 ############
 
-model = make_dnn(x_test, num_classes, num_hidden=50, dropout_rate=0.15)
+if fit_dnn:
+    model = make_dnn(x_test, num_classes, num_hidden=50, dropout_rate=0.15)
+else:
+    model = make_cnnc(x_test, num_classes)
 model.load_weights(model_path)
 ###########################################################
 print ('predict')
