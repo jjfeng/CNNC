@@ -54,6 +54,7 @@ def fit_dnn(env, outdir, c):
     targets = [
         join(outdir, 'dnn_model.h5')]
     cmd = [
+        'srun -p restart --cpus-per-task 2',
         'python train_with_labels_wholedatax.py',
         '--num-tf',
         NUM_TF,
@@ -101,6 +102,7 @@ def fit_cnnc(env, outdir, c):
     targets = [
         join(outdir, 'cnnc_model.h5')]
     cmd = [
+        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
         'python train_with_labels_wholedatax.py',
         '--num-tf',
         NUM_TF,
