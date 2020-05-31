@@ -11,6 +11,9 @@ from sklearn import metrics
 from scipy import interp
 ###############################
 # Jean modifications
+import argparse
+import json
+
 import torch
 from scipy.special import logsumexp
 
@@ -19,6 +22,35 @@ from spinn2.network import SierNet
 from common import get_perf
 from train_with_labels_wholedatax_easiernet import load_data_TF2
 
+def parse_args(args):
+    """ parse command line arguments """
+
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random number generator seed for replicability",
+        default=12,
+    )
+    parser.add_argument(
+        "--do-binary", action="store_true", default=False, help="fit binary outcome"
+    )
+    parser.add_argument(
+        "--data-path", type=str
+    )
+    parser.add_argument(
+        "--model-path", type=str
+    )
+    parser.add_argument(
+        "--tf-idx", type=int, default=1
+    )
+    parser.add_argument(
+        "--out-file", type=str
+    )
+    args = parser.parse_args()
+
+    return args
 
 def load_easier_net(model_file):
     meta_state_dict = torch.load(model_file)
@@ -36,23 +68,24 @@ def load_easier_net(model_file):
         models.append(model)
     return models
 
-length_TF =int(sys.argv[1]) # number of data parts divided
-data_path = sys.argv[2]
-num_classes = int(sys.argv[3])
-model_path = sys.argv[4] ## KEGG or Reactome or TF
-print("MODEL PATH", model_path)
-print ('select', type)
-whole_data_TF = [i for i in range(length_TF)]
-test_TF = [i for i in range (length_TF)]
-(x_test, y_test, count_set) = load_data_TF2(test_TF,data_path)
-x_test = x_test.reshape((x_test.shape[0],-1))
-print(x_test.shape, 'x_test samples')
-y_test = y_test.reshape((y_test.size, 1))
-############
+def main(args=sys.argv[1:]):
+    args = parse_args(args)
+    test_TF = [args.tf_idx]
+    (x_test, y_test, count_set) = load_data_TF2(test_TF,args.data_path, binary_outcome=args.do_binary, flatten=True)
+    x_test = x_test.reshape((x_test.shape[0],-1))
+    print(x_test.shape, 'x_test samples')
+    y_test = y_test.reshape((y_test.size, 1))
+    ############
 
-models = load_easier_net(model_path)
+    models = load_easier_net(args.model_path)
 
-y_log_prob = logsumexp([model.predict_log_proba(x_test) for model in models], axis=0) - np.log(len(models))
-y_predict = np.exp(y_log_prob)
-perf_dict = get_perf(y_predict, y_test)
-print(perf_dict)
+    y_log_prob = logsumexp([model.predict_log_proba(x_test) for model in models], axis=0) - np.log(len(models))
+    y_predict = np.exp(y_log_prob)
+    perf_dict = get_perf(y_predict, y_test)
+    perf_dict['model'] = "EASIERnet-DNN"
+    print(perf_dict)
+    with open(args.out_file, 'w') as f:
+        json.dump(perf_dict, f)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

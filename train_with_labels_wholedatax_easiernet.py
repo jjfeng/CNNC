@@ -22,7 +22,9 @@ from scipy import interp
 
 ###############
 # Jean modifications
+import pickle
 import argparse
+import itertools
 from joblib import Parallel, delayed
 import logging
 from sklearn.base import clone
@@ -42,7 +44,6 @@ def parse_args(args):
         help="Random number generator seed for replicability",
         default=12,
     )
-    parser.add_argument("--data-file", type=str, default="_output/data.npz")
     parser.add_argument(
         "--num-inits",
         type=int,
@@ -55,13 +56,19 @@ def parse_args(args):
         help="Number of classes in classification. Should be zero if doing regression",
     )
     parser.add_argument(
-        "--fit-dnn", action="store_true", default=False, help="Fit DNN vs CNNC"
+        "--do-binary", action="store_true", default=False, help="fit binary outcome"
     )
     parser.add_argument(
         "--data-path", type=str
     )
     parser.add_argument(
-        "--num-tf", type=int, default=1
+        "--fold-idxs-file", type=str
+    )
+    parser.add_argument(
+        "--num-tf", type=int, default=2
+    )
+    parser.add_argument(
+        "--exclude-tf", type=int, default=1
     )
     parser.add_argument(
         "--batch-size", type=int, default=32
@@ -90,20 +97,22 @@ def parse_args(args):
 
     assert args.num_classes != 1
 
+    args.n_jobs = args.num_inits
     return args
 
 def _fit(
     estimator,
-    X,
-    y,
+    X_trains,
+    y_trains,
     train,
     max_iters: int = 100,
     max_prox_iters: int = 100,
     seed: int = 0,
 ) -> list:
     torch.manual_seed(seed)
-    X_train = X[train]
-    y_train = y[train]
+    X_train = np.concatenate([X_trains[i] for i in train], axis=0)
+    y_train = np.concatenate([y_trains[i] for i in train], axis=0)
+    y_train = y_train.reshape((y_train.size, 1))
 
     my_estimator = clone(estimator)
     my_estimator.fit(
@@ -111,28 +120,31 @@ def _fit(
     )
     return my_estimator
 
-def load_data_TF2(indel_list,data_path, flatten=False): # cell type specific  ## random samples for reactome is not enough, need borrow some from keggp
+def load_data_TF2(indel_list, data_path, binary_outcome=False, flatten=False): # cell type specific  ## random samples for reactome is not enough, need borrow some from keggp
     import random
     import numpy as np
     xxdata_list = []
     yydata = []
     count_set = [0]
     count_setx = 0
-    for i in indel_list:#len(h_tf_sc)):
+    for i in indel_list:
         xdata = np.load(data_path+'/Nxdata_tf' + str(i) + '.npy')
         ydata = np.load(data_path+'/ydata_tf' + str(i) + '.npy')
+        num_obs = 0
         for k in range(len(ydata)):
+            if binary_outcome and int(ydata[k]) > 1:
+                continue
             if flatten:
                 xxdata_list.append(xdata[k,:,:,:].flatten())
             else:
                 xxdata_list.append(xdata[k,:,:,:])
             yydata.append(ydata[k])
-        count_setx = count_setx + len(ydata)
+            num_obs += 1
+        count_setx = count_setx + num_obs
         count_set.append(count_setx)
         print (i,len(ydata))
     yydata_array = np.array(yydata)
     yydata_x = yydata_array.astype('int')
-    print (np.array(xxdata_list).shape)
     return((np.array(xxdata_list),yydata_x,count_set))
 
 def main(args=sys.argv[1:]):
@@ -145,23 +157,23 @@ def main(args=sys.argv[1:]):
         format="%(message)s", filename=args.log_file, level=logging.DEBUG
     )
 
-    whole_data_TF = [i for i in range(args.num_tf)]
-    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,args.data_path, flatten=True)
-    n_obs = x_train.shape[0]
+    #####
+    # Load data
+    #####
+    x_trains = []
+    y_trains = []
+    whole_data_TF = [i for i in range(args.num_tf) if i != args.exclude_tf]
+    for tf_idx in whole_data_TF:
+        x_train, y_train, _ = load_data_TF2([tf_idx],args.data_path,binary_outcome=args.do_binary,flatten=True)
+        x_trains.append(x_train)
+        y_trains.append(y_train)
     n_inputs = x_train.shape[1]
-    print(x_train.shape, 'x_train samples')
-    save_dir = os.path.join(os.getcwd(), '_output', 'whole_model_test')
-    print(y_train)
-    #if num_classes > 2:
-    #    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_train = y_train.reshape((y_train.size, 1))
-    print(y_train.shape, 'y_train samples')
-        ###########
-    if not os.path.isdir(save_dir):
-        os.makedirs(save_dir)
-        ############
-    #torch.manual_seed(seed)
-    #print("THREADS", torch.get_num_threads())
+    n_obs = sum([x_train.shape[0] for x_train in x_trains])
+    y = np.concatenate(y_trains)
+
+    ######
+    # Begin training
+    ######
     base_estimator = SierNetEstimator(
         n_inputs=n_inputs,
         input_filter_layer=True,
@@ -170,32 +182,68 @@ def main(args=sys.argv[1:]):
         n_out=args.num_classes,
         full_tree_pen=args.full_tree_pen,
         input_pen=args.input_pen,
-        batch_size=args.batch_size, #(n_obs//n_batches + 1),
+        batch_size=args.batch_size,
         num_classes=args.num_classes,
-        # Weight classes by inverse of their observed ratios. Trying to balance classes
-        weight=(n_obs / (args.num_classes * np.bincount(y_train.flatten()))
+        weight=n_obs / (args.num_classes * np.bincount(y.flatten()))
         if args.num_classes >= 2
-        else None),
+        else None,
     )
-    n_jobs = args.num_inits
-    parallel = Parallel(n_jobs=n_jobs, verbose=True, pre_dispatch=n_jobs)
-    all_estimators = parallel(delayed(_fit)(
-            base_estimator,
-            x_train,
-            y_train,
-            train=np.arange(x_train.shape[0]),
-            max_iters=args.max_iters,
-            max_prox_iters=args.max_prox_iters,
-            seed=args.seed + init_idx,
+    parallel = Parallel(n_jobs=args.n_jobs, verbose=True, pre_dispatch=args.n_jobs)
+    if args.fold_idxs_file is not None:
+        with open(args.fold_idxs_file, "rb") as f:
+            fold_idx_dict = pickle.load(f)
+            num_folds = len(fold_idx_dict)
+
+        all_estimators = parallel(
+            delayed(_fit)(
+                base_estimator,
+                x_trains,
+                y_trains,
+                train=fold_idx_dict[fold_idx]["train"],
+                max_iters=args.max_iters,
+                max_prox_iters=args.max_prox_iters,
+                seed=args.seed + num_folds * init_idx + fold_idx,
+            )
+            for fold_idx, init_idx in itertools.product(
+                range(num_folds), range(args.num_inits)
+            )
         )
-        for init_idx in range(args.num_inits)
-    )
-    meta_state_dict = all_estimators[0].get_params()
-    meta_state_dict["state_dicts"] = [
-        estimator.net.state_dict() for estimator in all_estimators
-    ]
-    print("SUCCESS")
-    torch.save(meta_state_dict, args.out_model_file)
+
+        # Just printing things from the first fold
+        logging.info(f"sample estimator 0 fold 0")
+        all_estimators[0].net.get_net_struct()
+
+        assert (num_folds * args.num_inits) == len(all_estimators)
+
+        meta_state_dict = all_estimators[0].get_params()
+        meta_state_dict["state_dicts"] = [
+            [None for _ in range(num_folds)] for _ in range(args.num_inits)
+        ]
+        for (fold_idx, init_idx), estimator in zip(
+            itertools.product(range(num_folds), range(args.num_inits)), all_estimators
+        ):
+            meta_state_dict["state_dicts"][init_idx][
+                fold_idx
+            ] = estimator.net.state_dict()
+        torch.save(meta_state_dict, args.out_model_file)
+    else:
+        all_estimators = parallel(delayed(_fit)(
+                base_estimator,
+                x_trains,
+                y_trains,
+                train=np.arange(len(x_trains)),
+                max_iters=args.max_iters,
+                max_prox_iters=args.max_prox_iters,
+                seed=args.seed + init_idx,
+            )
+            for init_idx in range(args.num_inits)
+        )
+        meta_state_dict = all_estimators[0].get_params()
+        meta_state_dict["state_dicts"] = [
+            estimator.net.state_dict() for estimator in all_estimators
+        ]
+        print("SUCCESS")
+        torch.save(meta_state_dict, args.out_model_file)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

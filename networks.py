@@ -3,20 +3,15 @@ from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import SGD
 
-def make_dnn(x_train, num_classes, num_hidden=100, dropout_rate=0.15):
+def make_dnn(x_train, num_classes, num_layers=1, num_hidden=100, dropout_rate=0.15):
     model = Sequential()
     #model.add(Conv2D(32, (3, 3), padding='same',input_shape=x_train.shape[1:]))
     model.add(Dense(num_hidden, input_shape=x_train.shape[1:]))
     model.add(Activation('relu'))
-    model.add(Dense(num_hidden))
-    model.add(Activation('relu'))
-    model.add(Dropout(dropout_rate))
-    model.add(Dense(num_hidden))
-    model.add(Activation('relu'))
-    model.add(Dropout(dropout_rate))
-    model.add(Dense(num_hidden))
-    model.add(Activation('relu'))
-    model.add(Dropout(dropout_rate))
+    for i in range(num_layers - 1):
+        model.add(Dense(num_hidden))
+        model.add(Activation('relu'))
+        model.add(Dropout(dropout_rate))
     if num_classes < 2:
         print('no enough categories')
         sys.exit()

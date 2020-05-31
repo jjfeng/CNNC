@@ -44,10 +44,16 @@ def parse_args(args):
         "--fit-dnn", action="store_true", default=False, help="Fit DNN vs CNNC"
     )
     parser.add_argument(
+        "--do-binary", action="store_true", default=False, help="fit binary outcome"
+    )
+    parser.add_argument(
         "--data-path", type=str
     )
     parser.add_argument(
-        "--num-tf", type=int, default=1
+        "--num-tf", type=int, default=2
+    )
+    parser.add_argument(
+        "--exclude-tf", type=int, default=1
     )
     parser.add_argument(
         "--batch-size", type=int, default=32
@@ -57,6 +63,9 @@ def parse_args(args):
     )
     parser.add_argument(
         "--n-hidden", type=int, default=10, help="Number of hidden nodes per layer"
+    )
+    parser.add_argument(
+        "--dropout-rate", type=float, default=0.15, help="probability of dropping out a node"
     )
     parser.add_argument(
         "--epochs", type=int, default=40, help="Number of Adam epochs"
@@ -73,10 +82,11 @@ def main(args=sys.argv[1:]):
     args = parse_args(args)
     tf.random.set_seed(args.seed)
 
-    whole_data_TF = [i for i in range(args.num_tf)]
-    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,args.data_path, flatten=args.fit_dnn)
+    whole_data_TF = [i for i in range(args.num_tf) if i != args.exclude_tf]
+    (x_train, y_train,count_set_train) = load_data_TF2(whole_data_TF,args.data_path,binary_outcome=args.do_binary, flatten=args.fit_dnn)
     print(x_train.shape, 'x_train samples')
-    save_dir = os.path.join(os.getcwd(), '_output', 'whole_model_test')
+    save_dir = args.out_model_file.replace(".h5", "_scratch")
+    print(save_dir)
     if args.num_classes > 2:
         y_train = keras.utils.to_categorical(y_train, args.num_classes)
     print(y_train.shape, 'y_train samples')
@@ -85,7 +95,7 @@ def main(args=sys.argv[1:]):
         os.makedirs(save_dir)
         ############
     if args.fit_dnn:
-        model = make_dnn(x_train, args.num_classes, num_hidden=args.n_hidden, dropout_rate=0.15)
+        model = make_dnn(x_train, args.num_classes, num_layers=args.n_layers, num_hidden=args.n_hidden, dropout_rate=args.dropout_rate)
     else:
         model = make_cnnc(x_train, args.num_classes)
 
