@@ -31,7 +31,7 @@ nest.add(
 nest.add_aggregate('all_tf_res', list)
 nest.add(
     'tf_idx',
-    np.arange(1),
+    np.arange(5),
     label_func=lambda c: 'tf_%d' % c)
 
 nest.add_aggregate('all_res', list)
@@ -400,6 +400,7 @@ def fit_final_vgg_easier_net(env, outdir, c):
         '--is-vgg',
         '--num-init',
         NUM_INITS * 2,
+        '--n-jobs 4',
         '--num-classes 2',
         '--max-iters',
         2 * VGG_EPOCHS,
