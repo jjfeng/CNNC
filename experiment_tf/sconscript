@@ -28,11 +28,13 @@ nest.add(
     range(1),
     label_func=lambda c: 'seed_%d' % c)
 
+nest.add_aggregate('all_tf_res', list)
 nest.add(
     'tf_idx',
-    np.arange(5),
+    np.arange(1),
     label_func=lambda c: 'tf_%d' % c)
 
+nest.add_aggregate('all_res', list)
 @nest.add_target_with_env(localenv)
 def make_fold_splits(env, outdir, c):
     targets = [
@@ -418,6 +420,7 @@ def evaluate_vgg_easiernet(env, outdir, c):
     targets = [
         join(outdir, 'eval_vgg_easiernet.json'),
         join(outdir, 'eval_vgg_easiernet_log.txt')]
+    c['all_res'].append(targets[0])
     cmd = [
         'python predict_easiernet.py',
         '--tf-idx',
@@ -432,3 +435,47 @@ def evaluate_vgg_easiernet(env, outdir, c):
         targets,
         c['fit_final_vgg_easier_net'],
         ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def collate_tf(env, outdir, c):
+    targets = [
+        join(outdir, 'res.csv')]
+    c['all_tf_res'].append(targets[0])
+    template = "/".join(c['all_res'][0].split("/")[:-1])
+    cmd = [
+        'python spinn2/collate_results.py',
+        '"experiment_tf/%s/eval_*.json"' % template,
+	'${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['all_res'],
+        ' '.join(map(str, cmd)))
+
+nest.pop('tf_idx')
+
+@nest.add_target_with_env(localenv)
+def collate_all_tf(env, outdir, c):
+    targets = [
+        join(outdir, 'res_all_tf.csv')]
+    template = c['all_tf_res'][0].replace("tf_0", "tf_*")
+    cmd = [
+        'python spinn2/collate_results.py',
+        '"experiment_tf/%s"' % template,
+	'${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['all_tf_res'],
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def plot(env, outdir, c):
+    targets = [
+        join(outdir, 'tf_plot.pdf')]
+    cmd = [
+        'python plot_experiment_tf.py ${SOURCES[0]} ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['collate_all_tf'],
+        ' '.join(map(str, cmd)))
+

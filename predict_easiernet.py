@@ -105,6 +105,7 @@ def main(args=sys.argv[1:]):
     y_predict = np.exp(y_log_prob)
     perf_dict = get_perf(y_predict, y_test)
     perf_dict['model'] = "EASIERnet-DNN" if not args.is_vgg else "EASIERnet-VGG"
+    perf_dict['tf'] = args.tf_idx
     print(perf_dict)
     with open(args.out_file, 'w') as f:
         json.dump(perf_dict, f)

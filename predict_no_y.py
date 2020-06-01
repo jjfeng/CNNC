@@ -91,6 +91,7 @@ def main(args=sys.argv[1:]):
     y_predict = model.predict(x_test)
     perf_dict = get_perf(y_predict, y_test)
     perf_dict['model'] = 'DNN' if args.fit_dnn else 'CNNC'
+    perf_dict['tf'] = args.tf_idx
     print(perf_dict)
     with open(args.out_file, 'w') as f:
         json.dump(perf_dict, f)
