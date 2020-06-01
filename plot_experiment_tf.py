@@ -36,7 +36,7 @@ def parse_args(args):
         "--ymin", type=float, default=0.5,
     )
     parser.add_argument(
-        "--ymax", type=float, default=1.5,
+        "--ymax", type=float, default=0.85,
     )
     parser.set_defaults()
     args = parser.parse_args()
@@ -66,7 +66,8 @@ def main(args=sys.argv[1:]):
         dodge=False,
         palette=palette,
     )
-    grid.set(yscale="log", ylim=(args.ymin, args.ymax))
+    #grid.set(yscale="log", ylim=(args.ymin, args.ymax))
+    grid.set(yscale="log")
     sns.despine()
     plt.tight_layout()
     plt.savefig(args.out_plot)

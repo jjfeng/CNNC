@@ -55,237 +55,237 @@ def make_fold_splits(env, outdir, c):
         [],
         ' '.join(map(str, cmd)))
 
-#@nest.add_target_with_env(localenv)
-#def fit_dnn(env, outdir, c):
-#    targets = [
-#        join(outdir, 'dnn_model.h5')]
-#    cmd = [
-#        'srun -p restart --cpus-per-task 2',
-#        'python train_with_labels_wholedatax.py',
-#        '--num-tf',
-#        NUM_TF,
-#        '--exclude-tf',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--num-classes 2',
-#        '--n-hidden 100',
-#        '--n-layers 5',
-#        '--dropout-rate 0.15',
-#        '--epochs',
-#        EPOCHS,
-#        '--fit-dnn',
-#        '--do-binary',
-#	'--out-model-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        [],
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def evaluate_dnn(env, outdir, c):
-#    targets = [
-#        join(outdir, 'eval_dnn.json')]
-#    cmd = [
-#        'python predict_no_y.py',
-#        '--tf-idx',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--num-classes 2',
-#        '--fit-dnn',
-#        '--n-hidden 100',
-#        '--n-layers 5',
-#        '--dropout-rate 0.15',
-#        '--do-binary',
-#	'--model-path ${SOURCES[0]}',
-#	'--out-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        c['fit_dnn'],
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def fit_cnnc(env, outdir, c):
-#    targets = [
-#        join(outdir, 'cnnc_model.h5')]
-#    cmd = [
-#        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
-#        'python train_with_labels_wholedatax.py',
-#        '--num-tf',
-#        NUM_TF,
-#        '--exclude-tf',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--num-classes 2',
-#        '--epochs',
-#        EPOCHS,
-#        '--do-binary',
-#	'--out-model-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        [],
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def evaluate_cnnc(env, outdir, c):
-#    targets = [
-#        join(outdir, 'eval_cnnc.json')]
-#    cmd = [
-#        'python predict_no_y.py',
-#        '--tf-idx',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--num-classes 2',
-#        '--do-binary',
-#	'--model-path ${SOURCES[0]}',
-#	'--out-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        c['fit_cnnc'],
-#        ' '.join(map(str, cmd)))
-#
-#
-#nest.add_aggregate('easier_net_res', list)
-#nest.add(
-#    'input_pen',
-#    INPUT_PENS,
-#    label_func=lambda c: 'input_pen_%.8f' % c)
-#
-#nest.add(
-#    'full_tree_pen',
-#    FULL_TREE_PENS,
-#    label_func=lambda c: 'full_tree_pen_%.8f' % c)
-#
-#@nest.add_target_with_env(localenv)
-#def fit_easier_net(env, outdir, c):
-#    targets = [
-#        join(outdir, 'train_easier_log.txt'),
-#        join(outdir, 'easier_model.pth')]
-#    cmd = [
-#        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
-#        'python train_with_labels_wholedatax_easiernet.py',
-#        '--num-tf',
-#        NUM_TF,
-#        '--exclude-tf',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--fold-idxs ${SOURCES[0]}',
-#        '--num-init',
-#        NUM_INITS,
-#        '--n-jobs 4',
-#        '--num-classes 2',
-#        '--full-tree-pen',
-#        c['full_tree_pen'],
-#        '--input-pen',
-#        c['input_pen'],
-#        '--n-hidden 100',
-#        '--n-layers 5',
-#        '--max-iters',
-#        2 * EPOCHS,
-#        '--max-prox-iters',
-#        2 * PROX_EPOCHS,
-#        '--do-binary',
-#	'--out-model-file ${TARGETS[1]}',
-#	'--log-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        c['make_fold_splits'],
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def evaluate_easiernet(env, outdir, c):
-#    targets = [
-#        join(outdir, 'eval_easiernet_folds.json')]
-#    c['easier_net_res'].append(targets[0])
-#    cmd = [
-#        'python evaluate_easiernet_folds.py',
-#        '--num-tf',
-#        NUM_TF,
-#        '--exclude-tf',
-#        c['tf_idx'],
-#        '--fold-idxs ${SOURCES[0]}',
-#        '--data-path NEPDF_data',
-#        '--do-binary',
-#	'--model-path ${SOURCES[1]}',
-#	'--out-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        [c['make_fold_splits'][0], c['fit_easier_net'][1]],
-#        ' '.join(map(str, cmd)))
-#
-#nest.pop('input_pen')
-#
-#@nest.add_target_with_env(localenv)
-#def select_easier_net(env, outdir, c):
-#    targets = [
-#        join(outdir, 'selected_easiernet.json'),
-#        join(outdir, 'selected_easiernet_log.txt')]
-#    template = join("experiment_tf", c['easier_net_res'][0].replace(
-#        	"input_pen_%.8f/full_tree_pen_%.8f/" % (INPUT_PENS[0], FULL_TREE_PENS[0]),
-#                "input_pen_%.8f/full_tree_pen_%.8f/"))
-#    cmd = [
-#        'python collate_best_param.py',
-#        '--template',
-#        '"%s"' % template,
-#        '--input-pen',
-#        ",".join(map(str, INPUT_PENS)),
-#        '--full',
-#        ",".join(map(str, FULL_TREE_PENS)),
-#        '--seed',
-#        c['seed'],
-#        '--out-file ${TARGETS[0]}',
-#        '--log-file ${TARGETS[1]}']
-#    return env.Command(
-#        targets,
-#        c['easier_net_res'],
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def fit_final_easier_net(env, outdir, c):
-#    targets = [
-#        join(outdir, 'train_easier_log.txt'),
-#        join(outdir, 'easier_model.pth')]
-#    cmd = [
-#        'python train_with_labels_wholedatax_easiernet.py',
-#        '--num-tf',
-#        NUM_TF,
-#        '--exclude-tf',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--num-init',
-#        NUM_INITS * 2,
-#        '--num-classes 2',
-#        '--max-iters',
-#        2 * EPOCHS,
-#        '--max-prox-iters',
-#        2 * PROX_EPOCHS,
-#        '--do-binary',
-#        '--model-fit-params',
-#        '${SOURCES[0]}',
-#	'--out-model-file ${TARGETS[1]}',
-#	'--log-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        c['select_easier_net'],
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def evaluate_easiernet(env, outdir, c):
-#    targets = [
-#        join(outdir, 'eval_easiernet.json'),
-#        join(outdir, 'eval_easiernet_log.txt')]
-#    cmd = [
-#        'python predict_easiernet.py',
-#        '--tf-idx',
-#        c['tf_idx'],
-#        '--data-path NEPDF_data',
-#        '--do-binary',
-#	'--model-path ${SOURCES[1]}',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#    return env.Command(
-#        targets,
-#        c['fit_final_easier_net'],
-#        ' '.join(map(str, cmd)))
+@nest.add_target_with_env(localenv)
+def fit_dnn(env, outdir, c):
+    targets = [
+        join(outdir, 'dnn_model.h5')]
+    cmd = [
+        'srun -p restart --cpus-per-task 2',
+        'python train_with_labels_wholedatax.py',
+        '--num-tf',
+        NUM_TF,
+        '--exclude-tf',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--num-classes 2',
+        '--n-hidden 100',
+        '--n-layers 5',
+        '--dropout-rate 0.15',
+        '--epochs',
+        EPOCHS,
+        '--fit-dnn',
+        '--do-binary',
+	'--out-model-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        [],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def evaluate_dnn(env, outdir, c):
+    targets = [
+        join(outdir, 'eval_dnn.json')]
+    cmd = [
+        'python predict_no_y.py',
+        '--tf-idx',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--num-classes 2',
+        '--fit-dnn',
+        '--n-hidden 100',
+        '--n-layers 5',
+        '--dropout-rate 0.15',
+        '--do-binary',
+	'--model-path ${SOURCES[0]}',
+	'--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['fit_dnn'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def fit_cnnc(env, outdir, c):
+    targets = [
+        join(outdir, 'cnnc_model.h5')]
+    cmd = [
+        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
+        'python train_with_labels_wholedatax.py',
+        '--num-tf',
+        NUM_TF,
+        '--exclude-tf',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--num-classes 2',
+        '--epochs',
+        EPOCHS,
+        '--do-binary',
+	'--out-model-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        [],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def evaluate_cnnc(env, outdir, c):
+    targets = [
+        join(outdir, 'eval_cnnc.json')]
+    cmd = [
+        'python predict_no_y.py',
+        '--tf-idx',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--num-classes 2',
+        '--do-binary',
+	'--model-path ${SOURCES[0]}',
+	'--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['fit_cnnc'],
+        ' '.join(map(str, cmd)))
+
+
+nest.add_aggregate('easier_net_res', list)
+nest.add(
+    'input_pen',
+    INPUT_PENS,
+    label_func=lambda c: 'input_pen_%.8f' % c)
+
+nest.add(
+    'full_tree_pen',
+    FULL_TREE_PENS,
+    label_func=lambda c: 'full_tree_pen_%.8f' % c)
+
+@nest.add_target_with_env(localenv)
+def fit_easier_net(env, outdir, c):
+    targets = [
+        join(outdir, 'train_easier_log.txt'),
+        join(outdir, 'easier_model.pth')]
+    cmd = [
+        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
+        'python train_with_labels_wholedatax_easiernet.py',
+        '--num-tf',
+        NUM_TF,
+        '--exclude-tf',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--fold-idxs ${SOURCES[0]}',
+        '--num-init',
+        NUM_INITS,
+        '--n-jobs 4',
+        '--num-classes 2',
+        '--full-tree-pen',
+        c['full_tree_pen'],
+        '--input-pen',
+        c['input_pen'],
+        '--n-hidden 100',
+        '--n-layers 5',
+        '--max-iters',
+        2 * EPOCHS,
+        '--max-prox-iters',
+        2 * PROX_EPOCHS,
+        '--do-binary',
+	'--out-model-file ${TARGETS[1]}',
+	'--log-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['make_fold_splits'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def evaluate_easiernet(env, outdir, c):
+    targets = [
+        join(outdir, 'eval_easiernet_folds.json')]
+    c['easier_net_res'].append(targets[0])
+    cmd = [
+        'python evaluate_easiernet_folds.py',
+        '--num-tf',
+        NUM_TF,
+        '--exclude-tf',
+        c['tf_idx'],
+        '--fold-idxs ${SOURCES[0]}',
+        '--data-path NEPDF_data',
+        '--do-binary',
+	'--model-path ${SOURCES[1]}',
+	'--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        [c['make_fold_splits'][0], c['fit_easier_net'][1]],
+        ' '.join(map(str, cmd)))
+
+nest.pop('input_pen')
+
+@nest.add_target_with_env(localenv)
+def select_easier_net(env, outdir, c):
+    targets = [
+        join(outdir, 'selected_easiernet.json'),
+        join(outdir, 'selected_easiernet_log.txt')]
+    template = join("experiment_tf", c['easier_net_res'][0].replace(
+        	"input_pen_%.8f/full_tree_pen_%.8f/" % (INPUT_PENS[0], FULL_TREE_PENS[0]),
+                "input_pen_%.8f/full_tree_pen_%.8f/"))
+    cmd = [
+        'python collate_best_param.py',
+        '--template',
+        '"%s"' % template,
+        '--input-pen',
+        ",".join(map(str, INPUT_PENS)),
+        '--full',
+        ",".join(map(str, FULL_TREE_PENS)),
+        '--seed',
+        c['seed'],
+        '--out-file ${TARGETS[0]}',
+        '--log-file ${TARGETS[1]}']
+    return env.Command(
+        targets,
+        c['easier_net_res'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def fit_final_easier_net(env, outdir, c):
+    targets = [
+        join(outdir, 'train_easier_log.txt'),
+        join(outdir, 'easier_model.pth')]
+    cmd = [
+        'python train_with_labels_wholedatax_easiernet.py',
+        '--num-tf',
+        NUM_TF,
+        '--exclude-tf',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--num-init',
+        NUM_INITS * 2,
+        '--num-classes 2',
+        '--max-iters',
+        2 * EPOCHS,
+        '--max-prox-iters',
+        2 * PROX_EPOCHS,
+        '--do-binary',
+        '--model-fit-params',
+        '${SOURCES[0]}',
+	'--out-model-file ${TARGETS[1]}',
+	'--log-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['select_easier_net'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def evaluate_easiernet(env, outdir, c):
+    targets = [
+        join(outdir, 'eval_easiernet.json'),
+        join(outdir, 'eval_easiernet_log.txt')]
+    cmd = [
+        'python predict_easiernet.py',
+        '--tf-idx',
+        c['tf_idx'],
+        '--data-path NEPDF_data',
+        '--do-binary',
+	'--model-path ${SOURCES[1]}',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+    return env.Command(
+        targets,
+        c['fit_final_easier_net'],
+        ' '.join(map(str, cmd)))
 
 nest.add_aggregate('vgg_easier_net_res', list)
 nest.add(
