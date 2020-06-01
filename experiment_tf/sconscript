@@ -16,12 +16,12 @@ NUM_TF = 13
 NUM_INITS = 5
 EPOCHS = 31
 PROX_EPOCHS = 11
-VGG_EPOCHS = 1
-VGG_PROX_EPOCHS = 1
+VGG_EPOCHS = 31
+VGG_PROX_EPOCHS = 11
 FULL_TREE_PENS = [0.0001,0.00001]
 INPUT_PENS = [0.001,0.0001,0.00001]
-VGG_FULL_TREE_PENS = [0.0001]
-VGG_INPUT_PENS = [0.001]
+VGG_FULL_TREE_PENS = FULL_TREE_PENS
+VGG_INPUT_PENS = INPUT_PENS
 
 nest.add(
     'seed',
@@ -388,6 +388,7 @@ def fit_final_vgg_easier_net(env, outdir, c):
         join(outdir, 'train_vgg_easier_log.txt'),
         join(outdir, 'vgg_easier_model.pth')]
     cmd = [
+        'srun --cpus-per-task 4 --mem=32000 --exclude=gizmoe1,gizmoe2',
         'python train_with_labels_wholedatax_easiernet.py',
         '--num-tf',
         NUM_TF,

@@ -107,6 +107,7 @@ def parse_args(args):
     )
     parser.add_argument("--out-model-file", type=str, default="_output/nn.pt")
     args = parser.parse_args()
+    args.input_filter_layer = True
 
     assert args.num_classes != 1
     if args.model_fit_params_file is not None:
@@ -115,8 +116,8 @@ def parse_args(args):
             args.full_tree_pen = model_params["full_tree_pen"]
             args.input_pen = model_params["input_pen"]
             args.input_filter_layer = model_params["input_filter_layer"]
-            args.n_layers = model_params["n_layers"]
-            args.n_hidden = model_params["n_hidden"]
+            args.n_layers = model_params.get("n_layers", None)
+            args.n_hidden = model_params.get("n_hidden", None)
 
     if args.n_jobs is None:
         args.n_jobs = args.num_inits
@@ -203,7 +204,7 @@ def main(args=sys.argv[1:]):
     if args.is_vgg:
         base_estimator = VGGSierNetEstimator(
             n_inputs=n_inputs,
-            input_filter_layer=True,
+            input_filter_layer=args.input_filter_layer,
             n_out=args.num_classes,
             full_tree_pen=args.full_tree_pen,
             input_pen=args.input_pen,
@@ -217,7 +218,7 @@ def main(args=sys.argv[1:]):
     else:
         base_estimator = SierNetEstimator(
             n_inputs=n_inputs,
-            input_filter_layer=True,
+            input_filter_layer=args.input_filter_layer,
             n_layers=args.n_layers,
             n_hidden=args.n_hidden,
             n_out=args.num_classes,
