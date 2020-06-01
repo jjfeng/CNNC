@@ -122,20 +122,24 @@ def parse_args(args):
         args.n_jobs = args.num_inits
     return args
 
+def _create_x_train(X_trains, train):
+    X_train = np.concatenate([X_trains[i] for i in train], axis=0)
+    return X_train
+
+def _create_y_train(y_trains, train):
+    y_train = np.concatenate([y_trains[i] for i in train], axis=0)
+    y_train = y_train.reshape((y_train.size, 1))
+    return y_train
+
 def _fit(
     estimator,
-    X_trains,
-    y_trains,
-    train,
+    X_train,
+    y_train,
     max_iters: int = 100,
     max_prox_iters: int = 100,
     seed: int = 0,
 ) -> list:
     torch.manual_seed(seed)
-    X_train = np.concatenate([X_trains[i] for i in train], axis=0)
-    y_train = np.concatenate([y_trains[i] for i in train], axis=0)
-    y_train = y_train.reshape((y_train.size, 1))
-
     my_estimator = clone(estimator)
     my_estimator.fit(
         X_train, y_train, max_iters=max_iters, max_prox_iters=max_prox_iters
@@ -234,9 +238,9 @@ def main(args=sys.argv[1:]):
         all_estimators = parallel(
             delayed(_fit)(
                 base_estimator,
-                x_trains,
-                y_trains,
-                train=fold_idx_dict[fold_idx]["train"],
+                _create_x_train(x_trains,fold_idx_dict[fold_idx]["train"]),
+                _create_y_train(y_trains,fold_idx_dict[fold_idx]["train"]),
+                #train=fold_idx_dict[fold_idx]["train"],
                 max_iters=args.max_iters,
                 max_prox_iters=args.max_prox_iters,
                 seed=args.seed + num_folds * init_idx + fold_idx,
@@ -267,9 +271,9 @@ def main(args=sys.argv[1:]):
         if parallel is not None:
             all_estimators = parallel(delayed(_fit)(
                     base_estimator,
-                    x_trains,
-                    y_trains,
-                    train=np.arange(len(x_trains)),
+                    _create_x_train(x_trains, np.arange(len(x_trains))),
+                    _create_y_train(y_trains, np.arange(len(x_trains))),
+                    #train=np.arange(len(x_trains)),
                     max_iters=args.max_iters,
                     max_prox_iters=args.max_prox_iters,
                     seed=args.seed + init_idx,

@@ -25,6 +25,9 @@ def parse_args(args):
         default=12,
     )
     parser.add_argument("--model-path", type=str, default="_output/nn.pt")
+    parser.add_argument(
+        "--is-vgg", action="store_true",
+    )
     parser.add_argument("--fold-idxs-file", type=str, default=None)
     parser.add_argument(
         "--data-path", type=str
@@ -45,19 +48,26 @@ def parse_args(args):
     return args
 
 
-def load_easier_nets(model_file):
+def load_easier_nets(model_file, is_vgg):
     meta_state_dict = torch.load(model_file)
     all_models = []
     for fold_dicts in meta_state_dict["state_dicts"]:
         init_models = []
         for fold_state_dict in fold_dicts:
-            model = SierNet(
-                n_layers=meta_state_dict["n_layers"],
-                n_input=meta_state_dict["n_inputs"],
-                n_hidden=meta_state_dict["n_hidden"],
-                n_out=meta_state_dict["n_out"],
-                input_filter_layer=meta_state_dict["input_filter_layer"],
-            )
+            if is_vgg:
+                model = VGGSierNet(
+                    n_inputs=meta_state_dict["n_inputs"],
+                    n_out=meta_state_dict["n_out"],
+                    input_filter_layer=meta_state_dict["input_filter_layer"],
+                )
+            else:
+                model = SierNet(
+                    n_layers=meta_state_dict["n_layers"],
+                    n_input=meta_state_dict["n_inputs"],
+                    n_hidden=meta_state_dict["n_hidden"],
+                    n_out=meta_state_dict["n_out"],
+                    input_filter_layer=meta_state_dict["input_filter_layer"],
+                )
             model.load_state_dict(fold_state_dict)
             init_models.append(model)
         all_models.append(init_models)
@@ -86,7 +96,7 @@ def main(args=sys.argv[1:]):
         num_folds = len(fold_idx_dicts)
 
     # Load models and evaluate them on folds, take the average
-    all_models, meta_state_dict = load_easier_nets(args.model_path)
+    all_models, meta_state_dict = load_easier_nets(args.model_path, args.is_vgg)
     all_losses = []
     for fold_idx, fold_dict in enumerate(fold_idx_dicts):
         test_x = np.concatenate([x_trains[i] for i in fold_dict["test"]], axis=0)
