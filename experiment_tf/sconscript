@@ -85,6 +85,7 @@ def fit_dnn(env, outdir, c):
 def evaluate_dnn(env, outdir, c):
     targets = [
         join(outdir, 'eval_dnn.json')]
+    c['all_res'].append(targets[0])
     cmd = [
         'python predict_no_y.py',
         '--tf-idx',
@@ -129,6 +130,7 @@ def fit_cnnc(env, outdir, c):
 def evaluate_cnnc(env, outdir, c):
     targets = [
         join(outdir, 'eval_cnnc.json')]
+    c['all_res'].append(targets[0])
     cmd = [
         'python predict_no_y.py',
         '--tf-idx',
@@ -273,6 +275,7 @@ def evaluate_easiernet(env, outdir, c):
     targets = [
         join(outdir, 'eval_easiernet.json'),
         join(outdir, 'eval_easiernet_log.txt')]
+    c['all_res'].append(targets[0])
     cmd = [
         'python predict_easiernet.py',
         '--tf-idx',
@@ -470,11 +473,27 @@ def collate_all_tf(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def plot(env, outdir, c):
+def plot_loss(env, outdir, c):
     targets = [
         join(outdir, 'tf_plot.pdf')]
     cmd = [
-        'python plot_experiment_tf.py ${SOURCES[0]} ${TARGETS[0]}']
+        'python plot_experiment_tf.py ${SOURCES[0]} ${TARGETS[0]}',
+        '--yval test_loss',
+        '--ylab "Test loss"'
+    ]
+    return env.Command(
+        targets,
+        c['collate_all_tf'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_auc(env, outdir, c):
+    targets = [
+        join(outdir, 'tf_auc_plot.pdf')]
+    cmd = [
+        'python plot_experiment_tf.py ${SOURCES[0]} ${TARGETS[0]}'
+        '--yval test_auc',
+        '--ylab "AUC"']
     return env.Command(
         targets,
         c['collate_all_tf'],

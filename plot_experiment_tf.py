@@ -33,6 +33,12 @@ def parse_args(args):
         "out_plot", type=str,
     )
     parser.add_argument(
+        "--yval", type=str, default="test_loss"
+    )
+    parser.add_argument(
+        "--ylab", type=str, default=None
+    )
+    parser.add_argument(
         "--ymin", type=float, default=0.5,
     )
     parser.add_argument(
@@ -40,6 +46,9 @@ def parse_args(args):
     )
     parser.set_defaults()
     args = parser.parse_args()
+
+    if args.ylab is None:
+        args.ylab = args.yval
 
     return args
 
@@ -50,16 +59,28 @@ def main(args=sys.argv[1:]):
 
     # Load model results
     res_df = pd.read_csv(args.table_file, index_col=0)
-    res_df = res_df[["tf", "model", "test_loss"]]
-    res_df.columns = ["TF", "Model", "Test loss"]
+    res_df = res_df[["tf", "model", args.yval]]
+    res_df.columns = ["TF", "Model", args.ylab]
     res_df = res_df.astype({'TF': 'int32'})
 
     palette = sns.color_palette()
 
+    order = (
+        res_df[["TF", args.ylab]].groupby("TF")
+        .min()
+        .reset_index()
+        .sort_values(by=args.ylab)["TF"]
+    )
+    print(order)
+    order_dict = {order.iloc[i]: i for i in range(order.size)}
+    res_df["Transcription factor"] = [
+        order_dict[a] for a in res_df["TF"]
+    ]
+
     sns.set_context("paper", font_scale=1.2)
     grid = sns.stripplot(
-        x="TF",
-        y="Test loss",
+        x="Transcription factor",
+        y=args.ylab,
         hue="Model",
         data=res_df,
         jitter=False,
