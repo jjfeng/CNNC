@@ -59,6 +59,7 @@ def main(args=sys.argv[1:]):
                 print("NOT FOUND", res_file)
                 continue
             opt_param = tuple([(k, v) for k, v in res.items() if "loss" not in k])
+            print(res)
             option_res[opt_param] = res["cv_loss"]
 
     best_option = None

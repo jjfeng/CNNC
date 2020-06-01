@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 
 from spinn2.evaluate_siernet_folds import eval_fold_models
-from spinn2.network import SierNet
+from spinn2.network import SierNet, VGGSierNet
 
 from train_with_labels_wholedatax_easiernet import load_data_TF2
 
@@ -56,7 +56,7 @@ def load_easier_nets(model_file, is_vgg):
         for fold_state_dict in fold_dicts:
             if is_vgg:
                 model = VGGSierNet(
-                    n_inputs=meta_state_dict["n_inputs"],
+                    n_inputs=(meta_state_dict["n_inputs"],meta_state_dict["n_inputs"]),
                     n_out=meta_state_dict["n_out"],
                     input_filter_layer=meta_state_dict["input_filter_layer"],
                 )
@@ -86,9 +86,11 @@ def main(args=sys.argv[1:]):
     y_trains = []
     whole_data_TF = [i for i in range(args.num_tf) if i != args.exclude_tf]
     for tf_idx in whole_data_TF:
-        x_train, y_train, _ = load_data_TF2([tf_idx],args.data_path,binary_outcome=args.do_binary,flatten=True)
+        x_train, y_train, _ = load_data_TF2([tf_idx],args.data_path,binary_outcome=args.do_binary,flatten=not args.is_vgg)
         x_trains.append(x_train)
         y_trains.append(y_train)
+    if args.is_vgg:
+        x_trains = [x.reshape((x.shape[0], 1, x.shape[1], x.shape[2])) for x in x_trains]
 
     # Load folds
     with open(args.fold_idxs_file, "rb") as f:

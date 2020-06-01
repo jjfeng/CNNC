@@ -168,7 +168,7 @@ def load_data_TF2(indel_list, data_path, binary_outcome=False, flatten=False):
             num_obs += 1
         count_setx = count_setx + num_obs
         count_set.append(count_setx)
-        print (i,len(ydata))
+        print ("tf data", i, len(ydata))
     yydata_array = np.array(yydata)
     yydata_x = yydata_array.astype('int')
     return((np.array(xxdata_list),yydata_x,count_set))
@@ -202,7 +202,7 @@ def main(args=sys.argv[1:]):
     ######
     if args.is_vgg:
         base_estimator = VGGSierNetEstimator(
-            n_inputs=(n_inputs, n_inputs),
+            n_inputs=n_inputs,
             input_filter_layer=True,
             n_out=args.num_classes,
             full_tree_pen=args.full_tree_pen,
@@ -240,7 +240,6 @@ def main(args=sys.argv[1:]):
                 base_estimator,
                 _create_x_train(x_trains,fold_idx_dict[fold_idx]["train"]),
                 _create_y_train(y_trains,fold_idx_dict[fold_idx]["train"]),
-                #train=fold_idx_dict[fold_idx]["train"],
                 max_iters=args.max_iters,
                 max_prox_iters=args.max_prox_iters,
                 seed=args.seed + num_folds * init_idx + fold_idx,
@@ -273,7 +272,6 @@ def main(args=sys.argv[1:]):
                     base_estimator,
                     _create_x_train(x_trains, np.arange(len(x_trains))),
                     _create_y_train(y_trains, np.arange(len(x_trains))),
-                    #train=np.arange(len(x_trains)),
                     max_iters=args.max_iters,
                     max_prox_iters=args.max_prox_iters,
                     seed=args.seed + init_idx,

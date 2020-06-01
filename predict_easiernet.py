@@ -65,7 +65,7 @@ def load_easier_net(model_file, is_vgg):
     for state_dict in meta_state_dict["state_dicts"]:
         if is_vgg:
             model = VGGSierNet(
-                n_inputs=meta_state_dict["n_inputs"],
+                n_inputs=(meta_state_dict["n_inputs"], meta_state_dict["n_inputs"]),
                 n_out=meta_state_dict["n_out"],
                 input_filter_layer=meta_state_dict["input_filter_layer"],
             )
