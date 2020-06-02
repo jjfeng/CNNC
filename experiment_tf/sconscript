@@ -13,13 +13,13 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 KFOLD = 3
 NUM_TF = 13
-NUM_INITS = 5
-EPOCHS = 31
-PROX_EPOCHS = 11
-VGG_EPOCHS = 31
-VGG_PROX_EPOCHS = 11
-FULL_TREE_PENS = [0.0001,0.00001]
-INPUT_PENS = [0.001,0.0001,0.00001]
+NUM_INITS = 10
+EPOCHS = 60
+PROX_EPOCHS = 20
+VGG_EPOCHS = 60
+VGG_PROX_EPOCHS = 20
+FULL_TREE_PENS = [0.001,0.0001,0.00001]
+INPUT_PENS = [0.01,0.001,0.0001,0.00001]
 VGG_FULL_TREE_PENS = FULL_TREE_PENS
 VGG_INPUT_PENS = INPUT_PENS
 
@@ -55,95 +55,95 @@ def make_fold_splits(env, outdir, c):
         [],
         ' '.join(map(str, cmd)))
 
-@nest.add_target_with_env(localenv)
-def fit_dnn(env, outdir, c):
-    targets = [
-        join(outdir, 'dnn_model.h5')]
-    cmd = [
-        'srun -p restart --cpus-per-task 2',
-        'python train_with_labels_wholedatax.py',
-        '--num-tf',
-        NUM_TF,
-        '--exclude-tf',
-        c['tf_idx'],
-        '--data-path NEPDF_data',
-        '--num-classes 2',
-        '--n-hidden 100',
-        '--n-layers 5',
-        '--dropout-rate 0.15',
-        '--epochs',
-        EPOCHS,
-        '--fit-dnn',
-        '--do-binary',
-	'--out-model-file ${TARGETS[0]}']
-    return env.Command(
-        targets,
-        [],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def evaluate_dnn(env, outdir, c):
-    targets = [
-        join(outdir, 'eval_dnn.json')]
-    c['all_res'].append(targets[0])
-    cmd = [
-        'python predict_no_y.py',
-        '--tf-idx',
-        c['tf_idx'],
-        '--data-path NEPDF_data',
-        '--num-classes 2',
-        '--fit-dnn',
-        '--n-hidden 100',
-        '--n-layers 5',
-        '--dropout-rate 0.15',
-        '--do-binary',
-	'--model-path ${SOURCES[0]}',
-	'--out-file ${TARGETS[0]}']
-    return env.Command(
-        targets,
-        c['fit_dnn'],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def fit_cnnc(env, outdir, c):
-    targets = [
-        join(outdir, 'cnnc_model.h5')]
-    cmd = [
-        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
-        'python train_with_labels_wholedatax.py',
-        '--num-tf',
-        NUM_TF,
-        '--exclude-tf',
-        c['tf_idx'],
-        '--data-path NEPDF_data',
-        '--num-classes 2',
-        '--epochs',
-        EPOCHS,
-        '--do-binary',
-	'--out-model-file ${TARGETS[0]}']
-    return env.Command(
-        targets,
-        [],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def evaluate_cnnc(env, outdir, c):
-    targets = [
-        join(outdir, 'eval_cnnc.json')]
-    c['all_res'].append(targets[0])
-    cmd = [
-        'python predict_no_y.py',
-        '--tf-idx',
-        c['tf_idx'],
-        '--data-path NEPDF_data',
-        '--num-classes 2',
-        '--do-binary',
-	'--model-path ${SOURCES[0]}',
-	'--out-file ${TARGETS[0]}']
-    return env.Command(
-        targets,
-        c['fit_cnnc'],
-        ' '.join(map(str, cmd)))
+#@nest.add_target_with_env(localenv)
+#def fit_dnn(env, outdir, c):
+#    targets = [
+#        join(outdir, 'dnn_model.h5')]
+#    cmd = [
+#        'srun -p restart --cpus-per-task 2',
+#        'python train_with_labels_wholedatax.py',
+#        '--num-tf',
+#        NUM_TF,
+#        '--exclude-tf',
+#        c['tf_idx'],
+#        '--data-path NEPDF_data',
+#        '--num-classes 2',
+#        '--n-hidden 100',
+#        '--n-layers 5',
+#        '--dropout-rate 0.15',
+#        '--epochs',
+#        EPOCHS,
+#        '--fit-dnn',
+#        '--do-binary',
+#	'--out-model-file ${TARGETS[0]}']
+#    return env.Command(
+#        targets,
+#        [],
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def evaluate_dnn(env, outdir, c):
+#    targets = [
+#        join(outdir, 'eval_dnn.json')]
+#    c['all_res'].append(targets[0])
+#    cmd = [
+#        'python predict_no_y.py',
+#        '--tf-idx',
+#        c['tf_idx'],
+#        '--data-path NEPDF_data',
+#        '--num-classes 2',
+#        '--fit-dnn',
+#        '--n-hidden 100',
+#        '--n-layers 5',
+#        '--dropout-rate 0.15',
+#        '--do-binary',
+#	'--model-path ${SOURCES[0]}',
+#	'--out-file ${TARGETS[0]}']
+#    return env.Command(
+#        targets,
+#        c['fit_dnn'],
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def fit_cnnc(env, outdir, c):
+#    targets = [
+#        join(outdir, 'cnnc_model.h5')]
+#    cmd = [
+#        'srun --cpus-per-task 4 --exclude=gizmoe1,gizmoe2',
+#        'python train_with_labels_wholedatax.py',
+#        '--num-tf',
+#        NUM_TF,
+#        '--exclude-tf',
+#        c['tf_idx'],
+#        '--data-path NEPDF_data',
+#        '--num-classes 2',
+#        '--epochs',
+#        EPOCHS,
+#        '--do-binary',
+#	'--out-model-file ${TARGETS[0]}']
+#    return env.Command(
+#        targets,
+#        [],
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def evaluate_cnnc(env, outdir, c):
+#    targets = [
+#        join(outdir, 'eval_cnnc.json')]
+#    c['all_res'].append(targets[0])
+#    cmd = [
+#        'python predict_no_y.py',
+#        '--tf-idx',
+#        c['tf_idx'],
+#        '--data-path NEPDF_data',
+#        '--num-classes 2',
+#        '--do-binary',
+#	'--model-path ${SOURCES[0]}',
+#	'--out-file ${TARGETS[0]}']
+#    return env.Command(
+#        targets,
+#        c['fit_cnnc'],
+#        ' '.join(map(str, cmd)))
 
 
 nest.add_aggregate('easier_net_res', list)
@@ -324,8 +324,6 @@ def fit_vgg_easier_net(env, outdir, c):
         c['full_tree_pen'],
         '--input-pen',
         c['input_pen'],
-        '--n-hidden 100',
-        '--n-layers 5',
         '--max-iters',
         2 * VGG_EPOCHS,
         '--max-prox-iters',
@@ -491,7 +489,7 @@ def plot_auc(env, outdir, c):
     targets = [
         join(outdir, 'tf_auc_plot.pdf')]
     cmd = [
-        'python plot_experiment_tf.py ${SOURCES[0]} ${TARGETS[0]}'
+        'python plot_experiment_tf.py ${SOURCES[0]} ${TARGETS[0]}',
         '--yval test_auc',
         '--ylab "AUC"']
     return env.Command(

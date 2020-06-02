@@ -120,7 +120,7 @@ def parse_args(args):
             args.n_hidden = model_params.get("n_hidden", None)
 
     if args.n_jobs is None:
-        args.n_jobs = args.num_inits
+        args.n_jobs = min(args.num_inits, 16)
     return args
 
 def _create_x_train(X_trains, train):
@@ -183,6 +183,7 @@ def main(args=sys.argv[1:]):
     logging.basicConfig(
         format="%(message)s", filename=args.log_file, level=logging.DEBUG
     )
+    logging.info(str(args))
 
     #####
     # Load data
@@ -282,9 +283,8 @@ def main(args=sys.argv[1:]):
         else:
             all_estimators = [_fit(
                     base_estimator,
-                    x_trains,
-                    y_trains,
-                    train=np.arange(len(x_trains)),
+                    _create_x_train(x_trains, np.arange(len(x_trains))),
+                    _create_y_train(y_trains, np.arange(len(x_trains))),
                     max_iters=args.max_iters,
                     max_prox_iters=args.max_prox_iters,
                     seed=args.seed + init_idx,

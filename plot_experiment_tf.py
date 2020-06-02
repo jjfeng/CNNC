@@ -59,17 +59,17 @@ def main(args=sys.argv[1:]):
 
     # Load model results
     res_df = pd.read_csv(args.table_file, index_col=0)
-    res_df = res_df[["tf", "model", args.yval]]
-    res_df.columns = ["TF", "Model", args.ylab]
+    res_df = res_df[["tf", "model", args.yval, "test_loss"]]
+    res_df.columns = ["TF", "Model", args.ylab, "test_loss"]
     res_df = res_df.astype({'TF': 'int32'})
 
     palette = sns.color_palette()
 
     order = (
-        res_df[["TF", args.ylab]].groupby("TF")
+        res_df[["TF", "test_loss"]].groupby("TF")
         .min()
         .reset_index()
-        .sort_values(by=args.ylab)["TF"]
+        .sort_values(by="test_loss")["TF"]
     )
     print(order)
     order_dict = {order.iloc[i]: i for i in range(order.size)}
@@ -88,7 +88,7 @@ def main(args=sys.argv[1:]):
         palette=palette,
     )
     #grid.set(yscale="log", ylim=(args.ymin, args.ymax))
-    grid.set(yscale="log")
+    #grid.set(yscale="log")
     sns.despine()
     plt.tight_layout()
     plt.savefig(args.out_plot)
