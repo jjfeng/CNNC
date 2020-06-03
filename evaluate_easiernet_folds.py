@@ -2,6 +2,7 @@ import argparse
 import sys
 import json
 import pickle
+import logging
 
 import numpy as np
 import pandas as pd
@@ -42,6 +43,7 @@ def parse_args(args):
         "--do-binary", action="store_true", default=False, help="fit binary outcome"
     )
     parser.add_argument("--out-file", type=str, default="_output/eval.json")
+    parser.add_argument("--log-file", type=str, default="_output/eval_nn.txt")
     parser.set_defaults()
     args = parser.parse_args()
 
@@ -70,6 +72,7 @@ def load_easier_nets(model_file, is_vgg):
                 )
             model.load_state_dict(fold_state_dict)
             init_models.append(model)
+        model.get_net_struct()
         all_models.append(init_models)
     return all_models, meta_state_dict
 
@@ -77,6 +80,10 @@ def load_easier_nets(model_file, is_vgg):
 def main(args=sys.argv[1:]):
     args = parse_args(args)
     print(args)
+    logging.basicConfig(
+        format="%(message)s", filename=args.log_file, level=logging.DEBUG
+    )
+    logging.info(str(args))
     np.random.seed(args.seed)
 
     #####
